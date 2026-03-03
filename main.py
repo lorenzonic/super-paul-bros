@@ -619,8 +619,16 @@ class Game:
                                    for r in self.touch._rects.values()):
                             self._go_name_input()  # any tap on menu → name input
                     elif self.state == STATE_NAME_INPUT:
+                        # PLAY button area
                         if 240 <= fy <= 290:
                             self._start_game()
+                        # Name Input box area: force open overlay on Web if tapped
+                        elif 150 <= fy <= 205 and _WEB:
+                            try:
+                                import platform as _plat
+                                _plat.window.eval("pbAskName()")
+                                self._waiting_web_name = True
+                            except Exception: pass
                     elif self.state == STATE_LEADERBOARD:
                         self.state = STATE_MENU
                         self._won  = False

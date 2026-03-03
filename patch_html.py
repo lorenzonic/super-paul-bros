@@ -242,6 +242,7 @@ JS = r"""
   function isMobile() {
     return (navigator.maxTouchPoints > 0) || /Mobi|Android/i.test(navigator.userAgent);
   }
+  window.pbIsMobile = isMobile;
 
   /* button: intercept pointerdown BEFORE the swipe handler so preventDefault
      on the document doesn't swallow the gesture */
