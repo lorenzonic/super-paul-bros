@@ -360,6 +360,9 @@ def draw_leaderboard(surface, board, score, player_name, won):
               21, SCREEN_WIDTH // 2, SCREEN_HEIGHT - 55, GRAY, center=True)
 
 
+# Rect used by both draw_menu() and the event handler to detect START clicks
+_MENU_START_BTN = pygame.Rect(0, 0, 220, 56)   # x/y set inside draw_menu
+
 # ── Menu screen ───────────────────────────────────────────────
 def draw_menu(surface, board):
     surface.fill(SKY)
@@ -367,23 +370,31 @@ def draw_menu(surface, board):
     pygame.draw.rect(surface, GROUND_TOP,  (0, SCREEN_HEIGHT - 80, SCREEN_WIDTH, 14))
 
     draw_text(surface, "SUPER PAUL BROS",
-              78, SCREEN_WIDTH // 2, 130, YELLOW, center=True)
+              78, SCREEN_WIDTH // 2, 80, YELLOW, center=True)
     draw_text(surface, "World  1 - 1",
-              34, SCREEN_WIDTH // 2, 220, WHITE,  center=True)
-    draw_text(surface, "Press  ENTER  or  tap  to start",
-              26, SCREEN_WIDTH // 2, 290, WHITE,  center=True)
+              30, SCREEN_WIDTH // 2, 183, WHITE,  center=True)
+
+    # ── big START button ──
+    sbw, sbh = 220, 56
+    sbx = SCREEN_WIDTH // 2 - sbw // 2
+    sby = 215
+    _MENU_START_BTN.topleft = (sbx, sby)
+    pygame.draw.rect(surface, GREEN,      (sbx, sby, sbw, sbh), border_radius=12)
+    pygame.draw.rect(surface, DARK_GREEN, (sbx, sby, sbw, sbh), 3, border_radius=12)
+    draw_text(surface, "START", 32, SCREEN_WIDTH // 2, sby + 11, WHITE, center=True)
+
     draw_text(surface, "A/D or ←/→  Move          SPACE/↑  Jump",
-              19, SCREEN_WIDTH // 2, 334, GRAY,   center=True)
+              18, SCREEN_WIDTH // 2, 291, GRAY,   center=True)
     draw_text(surface, "Stomp enemies · collect coins · reach the flag!",
-              17, SCREEN_WIDTH // 2, 358, GRAY,   center=True)
+              16, SCREEN_WIDTH // 2, 314, GRAY,   center=True)
 
     if board:
-        draw_text(surface, "Top 3:", 17, SCREEN_WIDTH // 2, 392, YELLOW, center=True)
+        draw_text(surface, "Top 3:", 17, SCREEN_WIDTH // 2, 348, YELLOW, center=True)
         medal_col = [(255, 215, 0), (192, 192, 192), (205, 127, 50)]
         for i, entry in enumerate(board[:3]):
             draw_text(surface,
                       f"{i+1}. {entry['name']}  {entry['score']:06d}",
-                      15, SCREEN_WIDTH // 2, 412 + i * 20, medal_col[i], center=True)
+                      15, SCREEN_WIDTH // 2, 368 + i * 20, medal_col[i], center=True)
 
     tmp_player = Player(SCREEN_WIDTH // 2, SCREEN_HEIGHT - 82)
     surface.blit(tmp_player.image,
@@ -413,7 +424,13 @@ class Game:
     def __init__(self):
         pygame.init()
         pygame.display.set_caption(TITLE)
-        self.screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
+        if _WEB:
+            self.screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
+        else:
+            self.screen = pygame.display.set_mode(
+                (SCREEN_WIDTH, SCREEN_HEIGHT),
+                pygame.SCALED | pygame.RESIZABLE
+            )
         self.clock  = pygame.time.Clock()
         self.state  = STATE_MENU
 
@@ -540,7 +557,7 @@ class Game:
                     if self.state == STATE_MENU:
                         if not any(r.collidepoint(fx, fy)
                                    for r in self.touch._rects.values()):
-                            self._go_name_input()
+                            self._go_name_input()  # any tap on menu → name input
                     elif self.state == STATE_NAME_INPUT:
                         if 240 <= fy <= 290:
                             self._start_game()
@@ -575,7 +592,7 @@ class Game:
                         sys.exit()
 
                 if self.state == STATE_MENU:
-                    if event.key == pygame.K_RETURN:
+                    if event.key in (pygame.K_RETURN, pygame.K_SPACE):
                         self._go_name_input()
 
                 elif self.state == STATE_NAME_INPUT:
@@ -585,9 +602,24 @@ class Game:
                         self._name_buf = self._name_buf[:-1]
 
                 elif self.state == STATE_LEADERBOARD:
-                    if event.key == pygame.K_RETURN:
+                    if event.key in (pygame.K_RETURN, pygame.K_SPACE):
                         self.state = STATE_MENU
                         self._won  = False
+
+            # ── mouse click (desktop START / PLAY buttons) ───────────
+            if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                mx, my = event.pos
+                if self.state == STATE_MENU:
+                    if _MENU_START_BTN.collidepoint(mx, my):
+                        self._go_name_input()
+                elif self.state == STATE_NAME_INPUT:
+                    # replicate the PLAY button rect from draw_name_input
+                    play_bx = SCREEN_WIDTH // 2 - 90
+                    if pygame.Rect(play_bx, 240, 180, 50).collidepoint(mx, my):
+                        self._start_game()
+                elif self.state == STATE_LEADERBOARD:
+                    self.state = STATE_MENU
+                    self._won  = False
 
     # ── update ───────────────────────────────────────────────
 
