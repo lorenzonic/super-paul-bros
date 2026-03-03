@@ -386,14 +386,14 @@ def draw_menu(surface, board):
     pygame.draw.rect(surface, GROUND_TOP,  (0, SCREEN_HEIGHT - 80, SCREEN_WIDTH, 14))
 
     draw_text(surface, "SUPER PAUL BROS",
-              78, SCREEN_WIDTH // 2, 80, YELLOW, center=True)
+              78, SCREEN_WIDTH // 2, 60, YELLOW, center=True)
     draw_text(surface, "World  1 - 1",
-              30, SCREEN_WIDTH // 2, 183, WHITE,  center=True)
+              30, SCREEN_WIDTH // 2, 140, WHITE,  center=True)
 
     # ── big START button ──
     sbw, sbh = 220, 56
     sbx = SCREEN_WIDTH // 2 - sbw // 2
-    sby = 215
+    sby = 180
     _MENU_START_BTN.topleft = (sbx, sby)
     pygame.draw.rect(surface, GREEN,      (sbx, sby, sbw, sbh), border_radius=12)
     pygame.draw.rect(surface, DARK_GREEN, (sbx, sby, sbw, sbh), 3, border_radius=12)
@@ -402,31 +402,25 @@ def draw_menu(surface, board):
     # ── LEADERBOARD button ──
     lbw, lbh = 220, 44
     lbx = SCREEN_WIDTH // 2 - lbw // 2
-    lby = sby + sbh + 12
+    lby = sby + sbh + 14
     _MENU_LB_BTN.topleft = (lbx, lby)
     pygame.draw.rect(surface, DARK_BLUE, (lbx, lby, lbw, lbh), border_radius=10)
     pygame.draw.rect(surface, BLUE,      (lbx, lby, lbw, lbh), 3, border_radius=10)
     draw_text(surface, "LEADERBOARD", 22, SCREEN_WIDTH // 2, lby + 10, WHITE, center=True)
 
+    # Instructions - shifted down to avoid overlap
     draw_text(surface, "A/D or \u2190/\u2192  Move          SPACE/\u2191  Jump",
-              18, SCREEN_WIDTH // 2, 310, GRAY,   center=True)
+              18, SCREEN_WIDTH // 2, 320, GRAY,   center=True)
     draw_text(surface, "Stomp enemies \u00b7 collect coins \u00b7 reach the flag!",
-              16, SCREEN_WIDTH // 2, 332, GRAY,   center=True)
+              16, SCREEN_WIDTH // 2, 345, GRAY,   center=True)
 
     if board:
-        draw_text(surface, "Top 3:", 17, SCREEN_WIDTH // 2, 348, YELLOW, center=True)
+        draw_text(surface, "Top 3:", 18, SCREEN_WIDTH // 2, 375, YELLOW, center=True)
         medal_col = [(255, 215, 0), (192, 192, 192), (205, 127, 50)]
         for i, entry in enumerate(board[:3]):
             draw_text(surface,
                       f"{i+1}. {entry['name']}  {entry['score']:06d}",
-                      15, SCREEN_WIDTH // 2, 368 + i * 20, medal_col[i], center=True)
-
-    tmp_player = Player(SCREEN_WIDTH // 2, SCREEN_HEIGHT - 82)
-    surface.blit(tmp_player.image,
-                 tmp_player.image.get_rect(midbottom=(SCREEN_WIDTH // 2,
-                                                       SCREEN_HEIGHT - 82)))
-
-
+                      16, SCREEN_WIDTH // 2, 400 + i * 22, medal_col[i], center=True)
 # ── Gradient sky ──────────────────────────────────────────────
 _sky_gradient = None
 def _draw_gradient_sky(surface):

@@ -159,7 +159,14 @@ JS = r"""
     var maxW  = window.innerWidth;
     var maxH  = window.innerHeight - dpadH;
     var scale = Math.min(maxW / GW, maxH / GH);
-    if (scale >= 1) scale = 1;   /* never upscale */
+    
+    /* Desktop: user requested "centered and slightly smaller" -> 90% scale (720x540) */
+    if (!isMobile()) {
+      scale = 0.9;
+    } else {
+      if (scale >= 1) scale = 1;   /* limit mobile to 1x to avoid blur */
+    }
+
     var dw = Math.floor(GW * scale);
     var dh = Math.floor(GH * scale);
     /* push the flexbox wrapper up to leave room for dpad */
