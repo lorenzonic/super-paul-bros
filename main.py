@@ -531,31 +531,30 @@ class Game:
                 pygame.quit()
                 sys.exit()
 
-            # ── touch events ──────────────────────────────
-            if event.type == pygame.FINGERDOWN:
-                fx = event.x * SCREEN_WIDTH
-                fy = event.y * SCREEN_HEIGHT
-                self.touch.finger_down(fx, fy, event.finger_id)
-                # tap outside touch buttons = advance the state
-                if self.state == STATE_MENU:
-                    if not any(r.collidepoint(fx, fy)
-                               for r in self.touch._rects.values()):
-                        self._go_name_input()
-                elif self.state == STATE_NAME_INPUT:
-                    # tap the PLAY button (y 240-290)
-                    if 240 <= fy <= 290:
-                        self._start_game()
-                elif self.state == STATE_LEADERBOARD:
-                    self.state = STATE_MENU
-                    self._won  = False
+            # ── touch events (desktop only; browser uses JS gesture controller) ─
+            if not _WEB:
+                if event.type == pygame.FINGERDOWN:
+                    fx = event.x * SCREEN_WIDTH
+                    fy = event.y * SCREEN_HEIGHT
+                    self.touch.finger_down(fx, fy, event.finger_id)
+                    if self.state == STATE_MENU:
+                        if not any(r.collidepoint(fx, fy)
+                                   for r in self.touch._rects.values()):
+                            self._go_name_input()
+                    elif self.state == STATE_NAME_INPUT:
+                        if 240 <= fy <= 290:
+                            self._start_game()
+                    elif self.state == STATE_LEADERBOARD:
+                        self.state = STATE_MENU
+                        self._won  = False
 
-            if event.type == pygame.FINGERUP:
-                self.touch.finger_up(event.finger_id)
+                if event.type == pygame.FINGERUP:
+                    self.touch.finger_up(event.finger_id)
 
-            if event.type == pygame.FINGERMOTION:
-                self.touch.finger_motion(
-                    event.x * SCREEN_WIDTH, event.y * SCREEN_HEIGHT,
-                    event.finger_id)
+                if event.type == pygame.FINGERMOTION:
+                    self.touch.finger_motion(
+                        event.x * SCREEN_WIDTH, event.y * SCREEN_HEIGHT,
+                        event.finger_id)
 
             # ── text input (mobile IME / on-screen keyboard) ─
             if event.type == pygame.TEXTINPUT:
