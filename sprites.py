@@ -745,147 +745,32 @@ class Player(pygame.sprite.Sprite):
         if key in cls._img_cache:
             return cls._img_cache[key]
 
-        # ── canvas ───────────────────────────────────────────
-        s  = 80
-        H  = 100
-        cx = s // 2
-        surf = pygame.Surface((s, H), pygame.SRCALPHA)
+        W, H = 80, 100
+        surf = pygame.Surface((W, H), pygame.SRCALPHA)
 
-        # ── palette ──────────────────────────────────────────
-        OV     = WHITE         if star else BLUE
-        OV_D   = (180,220,255) if star else (30, 60,140)
-        OV_L   = WHITE         if star else (110,160,255)
-        SH_COL = (255,220,50)  if star else DARK_BROWN
-        SH_HI  = (255,245,160) if star else (160,100,40)
-
-        # ── leg animation ────────────────────────────────────
-        if state == "walk":
-            swing_a =  12 * (1 if walk_frame == 0 else -1)
-            swing_b = -swing_a
-        elif state in ("jump", "fall"):
-            swing_a = swing_b = -12
-        else:
-            swing_a = swing_b = 0
-
-        # Body layout: face y=0-64, body y=58-100
-        BODY_TOP = 58
-
-        # ── arms (articulated: upper-arm + forearm, behind torso) ───
-        # Arms swing opposite to legs during walk for natural motion
-        if state == "walk":
-            l_arm_sw = int(-swing_a * 0.5)
-            r_arm_sw = int(-swing_b * 0.5)
-        elif state in ("jump", "fall"):
-            l_arm_sw = r_arm_sw = -8
-        else:
-            l_arm_sw = r_arm_sw = 0
-
-        arm_raise_y = -6 if state in ("jump", "fall") else 0
-        SH_Y = BODY_TOP + 7   # shoulder attachment Y
-
-        for side, sh_x, sw in ((-1, cx - 14, l_arm_sw), (1, cx + 14, r_arm_sw)):
-            # elbow position – slightly outward from shoulder, swings forward/back
-            ex = sh_x + side * 5 + int(sw * 0.35)
-            ey = SH_Y + 10 + arm_raise_y
-            # hand position – below elbow, follows swing more
-            hx = ex + side * 2 + int(sw * 0.45)
-            hy = ey + 9 + (arm_raise_y // 2)
-            # upper arm (red sleeve)
-            pygame.draw.line(surf, RED,             (sh_x, SH_Y), (ex, ey), 9)
-            pygame.draw.circle(surf, RED,           (sh_x, SH_Y), 5)        # shoulder joint
-            # forearm (skin colour)
-            pygame.draw.line(surf, CREAM,           (ex, ey),     (hx, hy), 7)
-            pygame.draw.circle(surf, (175, 55, 55), (ex, ey),     4)        # elbow joint
-            # glove / hand
-            pygame.draw.circle(surf, WHITE,         (hx, hy),     7)
-            pygame.draw.circle(surf, (195,195,195), (hx - 1, hy - 1), 3)
-
-        # ── unified torso ────────────────────────────────────
-        # Red shirt base
-        tx, ty, tw, th = cx - 14, BODY_TOP, 28, 24
-        pygame.draw.rect(surf, RED,         (tx, ty, tw, th), border_radius=6)
-        pygame.draw.rect(surf, (155, 0, 0), (tx, ty, 5, th),  border_radius=6)
-        pygame.draw.rect(surf, (255, 90,90),(tx + tw - 4, ty + 2, 3, th - 4), border_radius=2)
-        # Collar
-        pygame.draw.rect(surf, CREAM, (tx + 6, ty, tw - 12, 5), border_radius=2)
-
-        # Overalls bib (blue rectangle over shirt)
-        bib_x, bib_y, bib_w, bib_h = cx - 10, ty + 2, 20, 16
-        pygame.draw.rect(surf, OV,   (bib_x,     bib_y,     bib_w,     bib_h), border_radius=4)
-        pygame.draw.rect(surf, OV_D, (bib_x,     bib_y,     4,         bib_h), border_radius=4)
-        pygame.draw.rect(surf, OV_L, (bib_x + bib_w - 4, bib_y + 2, 3, bib_h - 4), border_radius=2)
-
-        # Shoulder straps (integrated into bib)
-        strap_w = 4
-        for sx in (bib_x + 2, bib_x + bib_w - strap_w - 2):
-            pygame.draw.rect(surf, OV, (sx, bib_y, strap_w, 8), border_radius=2)
-
-        # Belt at bottom of torso
-        belt_y = ty + th - 3
-        pygame.draw.rect(surf, DARK_YELLOW, (cx - 12, belt_y, 24, 4), border_radius=2)
-        pygame.draw.rect(surf, YELLOW,      (cx - 4,  belt_y, 8,  4), border_radius=1)
-
-        # ── legs (thigh + knee joint + shin) ──────────────────
-        leg_w   = 12
-        THIGH_H = 9
-        SHIN_H  = 9
-        hip_y   = belt_y + 2   # hip connection just below belt
-        lx = cx - 9
-        rx = cx + 9
-
-        for lc, sw in ((rx, swing_b), (lx, swing_a)):
-            bx = lc - leg_w // 2
-            thigh_y = hip_y + int(abs(sw) * 0.20)
-            # thigh
-            pygame.draw.rect(surf, OV,   (bx, thigh_y, leg_w, THIGH_H), border_radius=3)
-            pygame.draw.rect(surf, OV_D, (bx, thigh_y, 4,     THIGH_H), border_radius=2)
-            # knee joint (darker cap between thigh and shin)
-            knee_y = thigh_y + THIGH_H
-            pygame.draw.ellipse(surf, OV_D, (bx + 1, knee_y - 2, leg_w - 2, 6))
-            pygame.draw.ellipse(surf, OV_L, (bx + 3, knee_y - 1, leg_w - 7, 3))
-            # shin – slight horizontal shift for natural walking look
-            shin_bx = bx + int(sw * 0.15)
-            shin_by = knee_y + 2
-            pygame.draw.rect(surf, OV,   (shin_bx, shin_by, leg_w, SHIN_H), border_radius=3)
-            pygame.draw.rect(surf, OV_D, (shin_bx, shin_by, 4,     SHIN_H), border_radius=2)
-            pygame.draw.line(surf, OV_L,
-                             (shin_bx + leg_w - 3, shin_by + 2),
-                             (shin_bx + leg_w - 3, shin_by + SHIN_H - 2), 2)
-
-        # ── shoes ────────────────────────────────────────────
-        foot_w, foot_h = 22, 11
-        for lc, sw in ((rx, swing_b), (lx, swing_a)):
-            fx = lc + int(sw * 0.55) - foot_w // 2
-            fy = H - 12
-            pygame.draw.ellipse(surf, SH_COL, (fx,     fy,     foot_w,     foot_h))
-            pygame.draw.ellipse(surf, SH_HI,  (fx + 3, fy + 2, foot_w - 8, foot_h // 2))
-
-        # ── face PNG ─────────────────────────────────────────
         face_img = _get_face_image()
-        head_w = 78
-        head_h = 64
-        head_top = 0
-
         if face_img:
-            scaled = pygame.transform.smoothscale(face_img, (head_w, head_h))
-            fr = scaled.get_rect(centerx=cx, top=head_top)
-            surf.blit(scaled, fr)
+            scaled = pygame.transform.smoothscale(face_img, (W, H))
         else:
-            pygame.draw.circle(surf, CREAM, (cx, 30), 22)
-            eye_x = cx + facing * 5
-            pygame.draw.circle(surf, BLACK, (eye_x, 32), 3)
-            pygame.draw.circle(surf, WHITE, (eye_x + 1, 30), 1)
-            pygame.draw.ellipse(surf, DARK_BROWN, (eye_x - 6, 38, 10, 4))
-            pygame.draw.rect(surf, RED,      (cx - 14, 10, 28, 3))
-            pygame.draw.rect(surf, RED,      (cx - 10,  0, 20, 14), border_radius=3)
-            pygame.draw.rect(surf, DARK_RED, (cx - 10,  6, 20,  4))
+            # minimal fallback if image missing
+            scaled = pygame.Surface((W, H), pygame.SRCALPHA)
+            pygame.draw.ellipse(scaled, CREAM, (10, 5, 60, 75))
+            pygame.draw.circle(scaled, BLACK, (35, 35), 5)
 
-        # ── mirror for left-facing ────────────────────────────
+        # star-power: golden tint overlay
+        if star:
+            tint = pygame.Surface((W, H), pygame.SRCALPHA)
+            tint.fill((255, 220, 0, 80))
+            scaled.blit(tint, (0, 0), special_flags=pygame.BLEND_RGBA_ADD)
+
+        surf.blit(scaled, (0, 0))
+
         if facing == -1:
             surf = pygame.transform.flip(surf, True, False)
 
         cls._img_cache[key] = surf
         return surf
+
 
     # ── update ───────────────────────────────────────────────
 
