@@ -23,7 +23,7 @@ from sprites     import (Player, Goomba, GroundTile, BrickTile, QuestionBlock,
                          PipeTile, Coin, Kostas, FlagPole, Cloud, ScorePopup,
                          OrchideeA2Popup, StarBlock, Star, BrickDebris, draw_text)
 from level_data  import LEVEL_1, PLAYER_START, CLOUDS
-from leaderboard import load_leaderboard, save_entry
+from leaderboard import fetch_scores, post_score
 
 # ── Web (Pygbag) detection ───────────────────────────────
 try:
@@ -41,6 +41,7 @@ STATE_DEAD        = "dead"
 STATE_GAMEOVER    = "gameover"
 STATE_WIN         = "win"
 STATE_LEADERBOARD = "leaderboard"
+STATE_SAVING      = "saving"
 
 
 # ── Camera ──────────────────────────────────────────────────
@@ -361,6 +362,15 @@ def draw_leaderboard(surface, board, score, player_name, won):
               21, SCREEN_WIDTH // 2, SCREEN_HEIGHT - 55, GRAY, center=True)
 
 
+# ── Saving screen ──────────────────────────────────────────────
+def draw_saving(surface):
+    surface.fill((0, 10, 40))
+    draw_text(surface, "Saving score...", 36,
+              SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 - 20, YELLOW, center=True)
+    draw_text(surface, "Connecting to leaderboard", 20,
+              SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 + 28, GRAY, center=True)
+
+
 # Rect used by both draw_menu() and the event handler to detect START clicks
 _MENU_START_BTN = pygame.Rect(0, 0, 220, 56)   # x/y set inside draw_menu
 
@@ -431,10 +441,12 @@ class Game:
         self.clock  = pygame.time.Clock()
         self.state  = STATE_MENU
 
-        # leaderboard
-        self._leaderboard    = load_leaderboard()
-        self._player_name    = ""
-        self._won            = False
+        # leaderboard (loaded async in background)
+        self._leaderboard     = []
+        self._save_task       = None   # asyncio.Task for post_score
+        self._lb_fetch_task   = None   # asyncio.Task for fetch_scores
+        self._player_name     = ""
+        self._won             = False
 
         # name-input state
         self._name_buf       = ""
@@ -476,11 +488,20 @@ class Game:
     # ── run ──────────────────────────────────────────────────
 
     async def run(self):
+        # Fetch leaderboard in background while game starts
+        self._lb_fetch_task = asyncio.create_task(fetch_scores())
         while True:
             self.clock.tick(FPS)
             self._handle_events()
 
             if self.state == STATE_MENU:
+                # Update leaderboard when background fetch completes
+                if self._lb_fetch_task and self._lb_fetch_task.done():
+                    try:
+                        self._leaderboard = self._lb_fetch_task.result() or []
+                    except Exception:
+                        pass
+                    self._lb_fetch_task = None
                 draw_menu(self.screen, self._leaderboard)
 
             elif self.state == STATE_NAME_INPUT:
@@ -503,12 +524,24 @@ class Game:
                         self._load_level()
                         self.state = STATE_PLAYING
                     else:
-                        self._leaderboard = save_entry(self._player_name, self._score)
-                        self.state = STATE_LEADERBOARD
+                        self._save_task = asyncio.create_task(
+                            post_score(self._player_name, self._score))
+                        self.state = STATE_SAVING
 
             elif self.state in (STATE_GAMEOVER, STATE_WIN):
-                self._leaderboard = save_entry(self._player_name, self._score)
-                self.state = STATE_LEADERBOARD
+                self._save_task = asyncio.create_task(
+                    post_score(self._player_name, self._score))
+                self.state = STATE_SAVING
+
+            elif self.state == STATE_SAVING:
+                draw_saving(self.screen)
+                if self._save_task and self._save_task.done():
+                    try:
+                        self._leaderboard = self._save_task.result() or []
+                    except Exception:
+                        self._leaderboard = []
+                    self._save_task = None
+                    self.state = STATE_LEADERBOARD
 
             elif self.state == STATE_LEADERBOARD:
                 draw_leaderboard(self.screen, self._leaderboard,
@@ -602,6 +635,8 @@ class Game:
                     if event.key in (pygame.K_RETURN, pygame.K_SPACE):
                         self.state = STATE_MENU
                         self._won  = False
+                        # Refresh leaderboard in background for next visit
+                        self._lb_fetch_task = asyncio.create_task(fetch_scores())
 
             # ── mouse click (desktop START / PLAY buttons) ───────────
             if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
@@ -617,6 +652,7 @@ class Game:
                 elif self.state == STATE_LEADERBOARD:
                     self.state = STATE_MENU
                     self._won  = False
+                    self._lb_fetch_task = asyncio.create_task(fetch_scores())
 
     # ── update ───────────────────────────────────────────────
 
