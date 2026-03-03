@@ -24,6 +24,13 @@ from sprites     import (Player, Goomba, GroundTile, BrickTile, QuestionBlock,
 from level_data  import LEVEL_1, PLAYER_START, CLOUDS
 from leaderboard import load_leaderboard, save_entry
 
+# ── Web (Pygbag) detection ───────────────────────────────
+try:
+    import platform as _pl
+    _WEB = hasattr(_pl, "window")
+except Exception:
+    _WEB = False
+
 
 # ── State constants ──────────────────────────────
 STATE_MENU        = "menu"
@@ -746,8 +753,9 @@ class Game:
         draw_hud(self.screen, self._score, self._lives, self._coins,
                  self._player_name)
 
-        # touch controls
-        self.touch.draw(self.screen)
+        # touch controls (drawn only on desktop; browser uses HTML overlay buttons)
+        if not _WEB:
+            self.touch.draw(self.screen)
 
         # dead screen overlay
         if self.state == STATE_DEAD:

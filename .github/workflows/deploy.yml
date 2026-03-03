@@ -29,6 +29,9 @@ jobs:
         # --build        → headless build, no local server
         run: python -m pygbag --ume_block 0 --build .
 
+      - name: Patch HTML (mobile + loading screen)
+        run: python patch_html.py
+
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
         with:
