@@ -87,27 +87,17 @@ JS = r"""
   "use strict";
   var GW = 800, GH = 600;
 
-  /* ── canvas scale ── */
+  /* ── canvas scale: letterbox-center, no rotation ── */
   function scaleCanvas() {
     var c = document.querySelector("canvas");
     if (!c) return;
     var sw = window.innerWidth, sh = window.innerHeight;
-    var portrait = sw < sh;
-    var s;
-    if (portrait) {
-      s = Math.min(sh / GW, sw / GH);
-      c.style.width  = GW + "px";
-      c.style.height = GH + "px";
-      c.style.transform =
-        "translate(" + (sw/2 - GW/2) + "px," + (sh/2 - GH/2) + "px)" +
-        " rotate(90deg) scale(" + s + ")";
-    } else {
-      s = Math.min(sw / GW, sh / GH);
-      var tx = (sw - GW * s) / 2, ty = (sh - GH * s) / 2;
-      c.style.width  = GW + "px";
-      c.style.height = GH + "px";
-      c.style.transform = "translate(" + tx + "px," + ty + "px) scale(" + s + ")";
-    }
+    var s  = Math.min(sw / GW, sh / GH);
+    var tx = (sw - GW * s) / 2;
+    var ty = (sh - GH * s) / 2;
+    c.style.width     = GW + "px";
+    c.style.height    = GH + "px";
+    c.style.transform = "translate(" + tx + "px," + ty + "px) scale(" + s + ")";
   }
 
   /* ── hide loading overlay ── */
@@ -149,14 +139,8 @@ JS = r"""
   var jBase    = joystick && joystick.querySelector(".pb-base");
   var jKnob    = joystick && joystick.querySelector(".pb-knob");
 
-  function isPortrait() { return window.innerWidth < window.innerHeight; }
-
   /* convert screen delta → game axes (positive gameX = right, positive gameY = up) */
   function toGame(dx, dy) {
-    if (isPortrait()) {
-      /* canvas rotated 90° CW:  screen-right = game-down, screen-down = game-right */
-      return { x: dy, y: -dx };
-    }
     return { x: dx, y: -dy };
   }
 

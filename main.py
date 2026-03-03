@@ -12,6 +12,7 @@
 #    ESC – quit / back to menu
 # ============================================================
 
+import os
 import sys
 import asyncio
 import pygame
@@ -422,15 +423,11 @@ def _draw_gradient_sky(surface):
 # ── Main Game class ───────────────────────────────────────────
 class Game:
     def __init__(self):
+        if not _WEB:
+            os.environ.setdefault("SDL_VIDEO_CENTERED", "1")
         pygame.init()
         pygame.display.set_caption(TITLE)
-        if _WEB:
-            self.screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
-        else:
-            self.screen = pygame.display.set_mode(
-                (SCREEN_WIDTH, SCREEN_HEIGHT),
-                pygame.SCALED | pygame.RESIZABLE
-            )
+        self.screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
         self.clock  = pygame.time.Clock()
         self.state  = STATE_MENU
 
