@@ -340,11 +340,15 @@ def draw_name_input(surface, name_buf, cursor_visible, board):
 # ── Leaderboard screen ────────────────────────────────────────
 def draw_leaderboard(surface, board, score, player_name, won):
     surface.fill((0, 10, 40))
-    title_col  = YELLOW if won else RED
-    title_text = "YOU WIN!" if won else "GAME OVER"
-    draw_text(surface, title_text, 56, SCREEN_WIDTH // 2, 28, title_col, center=True)
-    draw_text(surface, f"Your score:  {score:06d}", 24,
-              SCREEN_WIDTH // 2, 100, WHITE, center=True)
+    if not player_name:
+        # Opened from menu – no game played yet
+        draw_text(surface, "LEADERBOARD", 56, SCREEN_WIDTH // 2, 28, YELLOW, center=True)
+    else:
+        title_col  = YELLOW if won else RED
+        title_text = "YOU WIN!" if won else "GAME OVER"
+        draw_text(surface, title_text, 56, SCREEN_WIDTH // 2, 28, title_col, center=True)
+        draw_text(surface, f"Your score:  {score:06d}", 24,
+                  SCREEN_WIDTH // 2, 100, WHITE, center=True)
 
     draw_text(surface, "LEADERBOARD", 26, SCREEN_WIDTH // 2, 135, (150, 150, 220), center=True)
     pygame.draw.line(surface, (90, 90, 170),
@@ -373,6 +377,7 @@ def draw_saving(surface):
 
 # Rect used by both draw_menu() and the event handler to detect START clicks
 _MENU_START_BTN = pygame.Rect(0, 0, 220, 56)   # x/y set inside draw_menu
+_MENU_LB_BTN    = pygame.Rect(0, 0, 220, 44)   # x/y set inside draw_menu
 
 # ── Menu screen ───────────────────────────────────────────────
 def draw_menu(surface, board):
@@ -394,10 +399,19 @@ def draw_menu(surface, board):
     pygame.draw.rect(surface, DARK_GREEN, (sbx, sby, sbw, sbh), 3, border_radius=12)
     draw_text(surface, "START", 32, SCREEN_WIDTH // 2, sby + 11, WHITE, center=True)
 
-    draw_text(surface, "A/D or ←/→  Move          SPACE/↑  Jump",
-              18, SCREEN_WIDTH // 2, 291, GRAY,   center=True)
-    draw_text(surface, "Stomp enemies · collect coins · reach the flag!",
-              16, SCREEN_WIDTH // 2, 314, GRAY,   center=True)
+    # ── LEADERBOARD button ──
+    lbw, lbh = 220, 44
+    lbx = SCREEN_WIDTH // 2 - lbw // 2
+    lby = sby + sbh + 12
+    _MENU_LB_BTN.topleft = (lbx, lby)
+    pygame.draw.rect(surface, DARK_BLUE, (lbx, lby, lbw, lbh), border_radius=10)
+    pygame.draw.rect(surface, BLUE,      (lbx, lby, lbw, lbh), 3, border_radius=10)
+    draw_text(surface, "LEADERBOARD", 22, SCREEN_WIDTH // 2, lby + 10, WHITE, center=True)
+
+    draw_text(surface, "A/D or \u2190/\u2192  Move          SPACE/\u2191  Jump",
+              18, SCREEN_WIDTH // 2, 310, GRAY,   center=True)
+    draw_text(surface, "Stomp enemies \u00b7 collect coins \u00b7 reach the flag!",
+              16, SCREEN_WIDTH // 2, 332, GRAY,   center=True)
 
     if board:
         draw_text(surface, "Top 3:", 17, SCREEN_WIDTH // 2, 348, YELLOW, center=True)
@@ -614,9 +628,10 @@ class Game:
                     if self.state == STATE_PLAYING:
                         self.touch.reset()
                         self.state = STATE_MENU
-                    elif self.state == STATE_NAME_INPUT:
+                    elif self.state in (STATE_NAME_INPUT, STATE_LEADERBOARD, STATE_SAVING):
                         pygame.key.stop_text_input()
                         self.state = STATE_MENU
+                        self._won  = False
                     else:
                         pygame.quit()
                         sys.exit()
@@ -624,6 +639,8 @@ class Game:
                 if self.state == STATE_MENU:
                     if event.key in (pygame.K_RETURN, pygame.K_SPACE):
                         self._go_name_input()
+                    elif event.key == pygame.K_l:
+                        self.state = STATE_LEADERBOARD
 
                 elif self.state == STATE_NAME_INPUT:
                     if event.key == pygame.K_RETURN:
@@ -644,6 +661,8 @@ class Game:
                 if self.state == STATE_MENU:
                     if _MENU_START_BTN.collidepoint(mx, my):
                         self._go_name_input()
+                    elif _MENU_LB_BTN.collidepoint(mx, my):
+                        self.state = STATE_LEADERBOARD
                 elif self.state == STATE_NAME_INPUT:
                     # replicate the PLAY button rect from draw_name_input
                     play_bx = SCREEN_WIDTH // 2 - 90
