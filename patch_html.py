@@ -50,9 +50,17 @@ html, body {
 #pb-loading .pb-fill { height:100%; background:#FFD700; border-radius:4px; animation:pbfill 20s cubic-bezier(.1,.6,.5,1) forwards; }
 @keyframes pbfill { from{width:0} to{width:95%} }
 
-/* ── canvas wrapper ── */
+/* ── canvas: fixed 800×600, centered ── */
 #pb-wrap { position:fixed; inset:0; display:flex; align-items:center; justify-content:center; background:#000; }
-canvas  { display:block !important; image-rendering:pixelated; image-rendering:crisp-edges; transform-origin:center center; }
+canvas  {
+  display:block !important;
+  position:static !important;
+  inset:auto !important;
+  margin:0 !important;
+  width:800px !important; height:600px !important;
+  transform:none !important;
+  image-rendering:pixelated; image-rendering:crisp-edges;
+}
 
 /* ── swipe joystick visual feedback ── */
 #pb-joystick {
@@ -87,17 +95,11 @@ JS = r"""
   "use strict";
   var GW = 800, GH = 600;
 
-  /* ── canvas scale: letterbox-center, no rotation ── */
-  function scaleCanvas() {
+  /* ── fix canvas to exact 800×600, centered via flexbox parent ── */
+  function fixCanvas() {
     var c = document.querySelector("canvas");
     if (!c) return;
-    var sw = window.innerWidth, sh = window.innerHeight;
-    var s  = Math.min(sw / GW, sh / GH);
-    var tx = (sw - GW * s) / 2;
-    var ty = (sh - GH * s) / 2;
-    c.style.width     = GW + "px";
-    c.style.height    = GH + "px";
-    c.style.transform = "translate(" + tx + "px," + ty + "px) scale(" + s + ")";
+    c.style.cssText += "; position:static!important; width:800px!important; height:600px!important; transform:none!important; inset:auto!important; margin:0!important; ";
   }
 
   /* ── hide loading overlay ── */
@@ -112,14 +114,14 @@ JS = r"""
   var poll = setInterval(function () {
     var c = document.querySelector("canvas");
     if (c && c.width > 0 && c.height > 0) {
-      clearInterval(poll); scaleCanvas(); setTimeout(hideLoading, 800);
+      clearInterval(poll); fixCanvas(); setTimeout(hideLoading, 800);
     }
   }, 200);
   /* Safety: hide loader after 30 s no matter what */
   setTimeout(hideLoading, 30000);
 
-  window.addEventListener("resize", scaleCanvas);
-  window.addEventListener("orientationchange", function () { setTimeout(scaleCanvas, 250); });
+  window.addEventListener("resize", fixCanvas);
+  window.addEventListener("orientationchange", function () { setTimeout(fixCanvas, 250); });
 
 
 
