@@ -25,8 +25,8 @@ import os
 import asyncio
 
 # ── *** FILL THESE IN *** ──────────────────────────────────────────────────
-SUPABASE_URL = "https://YOUR_PROJECT.supabase.co"
-SUPABASE_KEY = "YOUR_ANON_KEY"
+SUPABASE_URL = "https://uxujadrfuwvsjmaovsix.supabase.co"
+SUPABASE_KEY = "sb_publishable_HsDYt3yGvErDzmJLzlpV5A_5XcVCcxQ"
 # ──────────────────────────────────────────────────────────────────────────
 
 MAX_ENTRIES  = 10
