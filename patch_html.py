@@ -136,30 +136,45 @@ JS = r"""
 
   /* ── fullscreen ── */
   function enterFullscreen() {
-    var el = document.documentElement;
-    if (el.requestFullscreen)              el.requestFullscreen();
-    else if (el.webkitRequestFullscreen)   el.webkitRequestFullscreen();
-    else if (el.mozRequestFullScreen)      el.mozRequestFullScreen();
+    /* try multiple targets for cross-browser support */
+    var targets = [document.documentElement, document.body, document.querySelector("canvas")];
+    for (var i = 0; i < targets.length; i++) {
+      var el = targets[i];
+      if (!el) continue;
+      try {
+        if      (el.requestFullscreen)            { el.requestFullscreen(); return; }
+        else if (el.webkitRequestFullscreen)      { el.webkitRequestFullscreen(); return; }
+        else if (el.mozRequestFullScreen)         { el.mozRequestFullScreen(); return; }
+        else if (el.webkitEnterFullscreen)        { el.webkitEnterFullscreen(); return; }
+      } catch(e) {}
+    }
   }
   function isMobile() {
     return (navigator.maxTouchPoints > 0) || /Mobi|Android/i.test(navigator.userAgent);
   }
-  /* auto fullscreen on first touch (mobile only) */
+
+  /* button: intercept pointerdown BEFORE the swipe handler so preventDefault
+     on the document doesn't swallow the gesture */
+  var fsBtn = document.getElementById("pb-fs-btn");
+  if (fsBtn) {
+    fsBtn.addEventListener("pointerdown", function (e) {
+      e.stopPropagation();   /* don't let swipe handler see this touch */
+      e.preventDefault();
+      enterFullscreen();
+      /* visual feedback */
+      fsBtn.style.background = "rgba(255,255,255,.55)";
+      setTimeout(function () { fsBtn.style.background = ""; }, 300);
+    }, { passive: false });
+  }
+
+  /* auto fullscreen on first touch (mobile only) – skip if touch was on button */
   var _fsTriggered = false;
-  document.addEventListener("pointerdown", function () {
-    if (!_fsTriggered && isMobile()) {
+  document.addEventListener("pointerdown", function (e) {
+    if (!_fsTriggered && isMobile() && e.target !== fsBtn) {
       _fsTriggered = true;
       enterFullscreen();
     }
   });
-  /* button click */
-  var fsBtn = document.getElementById("pb-fs-btn");
-  if (fsBtn) {
-    fsBtn.addEventListener("click", function (e) {
-      e.stopPropagation();
-      enterFullscreen();
-    });
-  }
 
 
 
