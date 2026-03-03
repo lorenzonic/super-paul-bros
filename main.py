@@ -397,7 +397,7 @@ def draw_menu(surface, board):
     _MENU_START_BTN.topleft = (sbx, sby)
     pygame.draw.rect(surface, GREEN,      (sbx, sby, sbw, sbh), border_radius=12)
     pygame.draw.rect(surface, DARK_GREEN, (sbx, sby, sbw, sbh), 3, border_radius=12)
-    draw_text(surface, "START", 32, SCREEN_WIDTH // 2, sby + 11, WHITE, center=True)
+    draw_text(surface, "START", 32, SCREEN_WIDTH // 2, sby + 16, WHITE, center=True)
 
     # ── LEADERBOARD button ──
     lbw, lbh = 220, 44
@@ -406,7 +406,7 @@ def draw_menu(surface, board):
     _MENU_LB_BTN.topleft = (lbx, lby)
     pygame.draw.rect(surface, DARK_BLUE, (lbx, lby, lbw, lbh), border_radius=10)
     pygame.draw.rect(surface, BLUE,      (lbx, lby, lbw, lbh), 3, border_radius=10)
-    draw_text(surface, "LEADERBOARD", 22, SCREEN_WIDTH // 2, lby + 10, WHITE, center=True)
+    draw_text(surface, "LEADERBOARD", 22, SCREEN_WIDTH // 2, lby + 15, WHITE, center=True)
 
     # Instructions - shifted down to avoid overlap
     draw_text(surface, "A/D or \u2190/\u2192  Move          SPACE/\u2191  Jump",
