@@ -85,6 +85,17 @@ canvas  {
   color: rgba(255,255,255,.38); font: 12px/1 Arial,sans-serif;
   pointer-events: none; z-index: 7999; letter-spacing: .5px;
 }
+/* fullscreen button */
+#pb-fs-btn {
+  position: fixed; bottom: 12px; right: 12px; z-index: 9000;
+  width: 38px; height: 38px; border-radius: 8px;
+  background: rgba(255,255,255,.15); border: 2px solid rgba(255,255,255,.35);
+  color: #fff; font-size: 18px; line-height: 1;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; user-select: none;
+  transition: background .2s;
+}
+#pb-fs-btn:hover { background: rgba(255,255,255,.30); }
 </style>
 """
 
@@ -122,6 +133,33 @@ JS = r"""
 
   window.addEventListener("resize", fixCanvas);
   window.addEventListener("orientationchange", function () { setTimeout(fixCanvas, 250); });
+
+  /* ── fullscreen ── */
+  function enterFullscreen() {
+    var el = document.documentElement;
+    if (el.requestFullscreen)              el.requestFullscreen();
+    else if (el.webkitRequestFullscreen)   el.webkitRequestFullscreen();
+    else if (el.mozRequestFullScreen)      el.mozRequestFullScreen();
+  }
+  function isMobile() {
+    return (navigator.maxTouchPoints > 0) || /Mobi|Android/i.test(navigator.userAgent);
+  }
+  /* auto fullscreen on first touch (mobile only) */
+  var _fsTriggered = false;
+  document.addEventListener("pointerdown", function () {
+    if (!_fsTriggered && isMobile()) {
+      _fsTriggered = true;
+      enterFullscreen();
+    }
+  });
+  /* button click */
+  var fsBtn = document.getElementById("pb-fs-btn");
+  if (fsBtn) {
+    fsBtn.addEventListener("click", function (e) {
+      e.stopPropagation();
+      enterFullscreen();
+    });
+  }
 
 
 
@@ -248,6 +286,7 @@ OVERLAY_HTML = """
   <div class="pb-knob"></div>
 </div>
 <div id="pb-hint">&#8592; swipe to move &nbsp;|&nbsp; swipe up to jump &#8593;</div>
+<div id="pb-fs-btn" title="Fullscreen">&#x26F6;</div>
 """
 
 # ── patch ────────────────────────────────────────────────────────────────────
