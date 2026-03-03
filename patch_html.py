@@ -230,7 +230,7 @@ JS = r"""
       e.stopPropagation(); e.preventDefault();
       jumpBtn.classList.add("pb-pressed");
       fireKey("keydown", " ", "Space");
-      setTimeout(function() { fireKey("keyup", " ", "Space"); jumpBtn.classList.remove("pb-pressed"); }, 100);
+      setTimeout(function() { fireKey("keyup", " ", "Space"); jumpBtn.classList.remove("pb-pressed"); }, 500);
     }, { passive: false });
   }
 
@@ -333,7 +333,7 @@ JS = r"""
     if (g.y > JUMP_T && !jumpFired) {
       jumpFired = true;
       fireKey("keydown", " ", "Space");
-      setTimeout(function () { fireKey("keyup", " ", "Space"); }, 80);
+      setTimeout(function () { fireKey("keyup", " ", "Space"); }, 500);
     }
   }, { passive: false });
 
