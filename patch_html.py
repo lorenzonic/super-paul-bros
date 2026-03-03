@@ -50,15 +50,13 @@ html, body {
 #pb-loading .pb-fill { height:100%; background:#FFD700; border-radius:4px; animation:pbfill 20s cubic-bezier(.1,.6,.5,1) forwards; }
 @keyframes pbfill { from{width:0} to{width:95%} }
 
-/* ── canvas: fixed 800×600, centered ── */
-#pb-wrap { position:fixed; inset:0; display:flex; align-items:center; justify-content:center; background:#000; }
+/* ── canvas wrapper ── */
+#pb-wrap { position:fixed; inset:0; bottom:0; display:flex; align-items:center; justify-content:center; background:#000; }
 canvas  {
   display:block !important;
   position:static !important;
   inset:auto !important;
   margin:0 !important;
-  width:800px !important; height:600px !important;
-  transform:none !important;
   image-rendering:pixelated; image-rendering:crisp-edges;
 }
 
@@ -79,12 +77,34 @@ canvas  {
   background: rgba(255,255,255,.45);
   transition: left .04s, top .04s;
 }
-/* hint labels */
-#pb-hint {
-  position: fixed; bottom: 14px; left: 50%; transform: translateX(-50%);
-  color: rgba(255,255,255,.38); font: 12px/1 Arial,sans-serif;
-  pointer-events: none; z-index: 7999; letter-spacing: .5px;
+/* D-pad on-screen controls */
+#pb-dpad {
+  display: none;
+  position: fixed; bottom: 0; left: 0; right: 0;
+  height: 110px; z-index: 8500;
+  background: rgba(0,0,0,.45);
+  border-top: 1px solid rgba(255,255,255,.08);
+  align-items: center;
+  pointer-events: none;
 }
+#pb-dpad.pb-visible { display: flex; }
+.pb-btn {
+  pointer-events: all;
+  width: 78px; height: 78px; border-radius: 50%;
+  background: rgba(255,255,255,.15);
+  border: 2px solid rgba(255,255,255,.38);
+  color: #fff; font-size: 30px;
+  display: flex; align-items: center; justify-content: center;
+  user-select: none; -webkit-user-select: none;
+  margin: 0 10px;
+  transition: background .08s;
+  cursor: pointer;
+}
+.pb-btn.pb-pressed { background: rgba(255,255,255,.42); }
+#pb-btn-left  { margin-left: 18px; }
+#pb-btn-jump  { margin-left: auto; margin-right: 18px;
+  background: rgba(80,200,255,.22); border-color: rgba(80,200,255,.6);
+  font-size: 26px; }
 /* fullscreen button */
 #pb-fs-btn {
   position: fixed; bottom: 12px; right: 12px; z-index: 9000;
@@ -106,11 +126,21 @@ JS = r"""
   "use strict";
   var GW = 800, GH = 600;
 
-  /* ── fix canvas to exact 800×600, centered via flexbox parent ── */
+  /* ── fix canvas: 800×600 on desktop, scale-to-fit on mobile ── */
   function fixCanvas() {
     var c = document.querySelector("canvas");
     if (!c) return;
-    c.style.cssText += "; position:static!important; width:800px!important; height:600px!important; transform:none!important; inset:auto!important; margin:0!important; ";
+    var dpadH = (isMobile && isMobile()) ? 110 : 0;
+    var maxW  = window.innerWidth;
+    var maxH  = window.innerHeight - dpadH;
+    var scale = Math.min(maxW / GW, maxH / GH);
+    if (scale >= 1) scale = 1;   /* never upscale */
+    var dw = Math.floor(GW * scale);
+    var dh = Math.floor(GH * scale);
+    /* push the flexbox wrapper up to leave room for dpad */
+    var wrap = document.getElementById("pb-wrap");
+    if (wrap) wrap.style.bottom = dpadH + "px";
+    c.style.cssText += "; position:static!important; width:" + dw + "px!important; height:" + dh + "px!important; transform:none!important; inset:auto!important; margin:0!important; ";
   }
 
   /* ── hide loading overlay ── */
@@ -169,6 +199,41 @@ JS = r"""
 
   /* auto fullscreen on first touch (mobile only) – skip if touch was on button */
   var _fsTriggered = false;
+
+  /* ── D-pad on-screen buttons ── */
+  if (isMobile()) {
+    var dpad = document.getElementById("pb-dpad");
+    if (dpad) dpad.classList.add("pb-visible");
+    /* move fs button above dpad */
+    if (fsBtn) fsBtn.style.bottom = "122px";
+  }
+
+  function setupBtn(id, code, key) {
+    var btn = document.getElementById(id);
+    if (!btn) return;
+    btn.addEventListener("pointerdown", function(e) {
+      e.stopPropagation(); e.preventDefault();
+      btn.classList.add("pb-pressed");
+      press(code, key);
+    }, { passive: false });
+    function up(e) { e.preventDefault(); btn.classList.remove("pb-pressed"); release(code, key); }
+    btn.addEventListener("pointerup",     up, { passive: false });
+    btn.addEventListener("pointercancel", up, { passive: false });
+    btn.addEventListener("pointerleave",  up, { passive: false });
+  }
+  setupBtn("pb-btn-left",  "ArrowLeft",  "ArrowLeft");
+  setupBtn("pb-btn-right", "ArrowRight", "ArrowRight");
+
+  var jumpBtn = document.getElementById("pb-btn-jump");
+  if (jumpBtn) {
+    jumpBtn.addEventListener("pointerdown", function(e) {
+      e.stopPropagation(); e.preventDefault();
+      jumpBtn.classList.add("pb-pressed");
+      fireKey("keydown", " ", "Space");
+      setTimeout(function() { fireKey("keyup", " ", "Space"); jumpBtn.classList.remove("pb-pressed"); }, 100);
+    }, { passive: false });
+  }
+
   document.addEventListener("pointerdown", function (e) {
     if (!_fsTriggered && isMobile() && e.target !== fsBtn) {
       _fsTriggered = true;
@@ -228,6 +293,8 @@ JS = r"""
   }
 
   document.addEventListener("pointerdown", function (e) {
+    /* ignore if touch started on a dpad button or fs button */
+    if (e.target && e.target.closest && (e.target.closest("#pb-dpad") || e.target.closest("#pb-fs-btn"))) return;
     e.preventDefault();
     startX = e.clientX; startY = e.clientY;
     startTime = Date.now();
@@ -300,7 +367,11 @@ OVERLAY_HTML = """
   <div class="pb-base"></div>
   <div class="pb-knob"></div>
 </div>
-<div id="pb-hint">&#8592; swipe to move &nbsp;|&nbsp; swipe up to jump &#8593;</div>
+<div id="pb-dpad">
+  <div class="pb-btn" id="pb-btn-left">&#9664;</div>
+  <div class="pb-btn" id="pb-btn-right">&#9654;</div>
+  <div class="pb-btn" id="pb-btn-jump">&#9650; JUMP</div>
+</div>
 <div id="pb-fs-btn" title="Fullscreen">&#x26F6;</div>
 """
 
