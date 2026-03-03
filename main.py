@@ -519,6 +519,16 @@ class Game:
                 draw_menu(self.screen, self._leaderboard)
 
             elif self.state == STATE_NAME_INPUT:
+                # On web: poll JS overlay for submitted name
+                if _WEB and getattr(self, '_waiting_web_name', False):
+                    try:
+                        import platform as _plat
+                        if _plat.window.__pb_name_done:
+                            self._name_buf = str(_plat.window.__pb_name_value)[:12]
+                            self._waiting_web_name = False
+                            self._start_game()
+                    except Exception:
+                        pass
                 self._cursor_timer += 1
                 if self._cursor_timer >= 30:
                     self._cursor_timer   = 0
@@ -571,8 +581,17 @@ class Game:
         self._name_buf       = ""
         self._cursor_timer   = 0
         self._cursor_visible = True
+        self._waiting_web_name = False
+        if _WEB:
+            try:
+                import platform as _plat
+                _plat.window.eval("pbAskName()")
+                self._waiting_web_name = True
+            except Exception:
+                pass
+        else:
+            pygame.key.start_text_input()
         self.state = STATE_NAME_INPUT
-        pygame.key.start_text_input()
 
     def _start_game(self):
         pygame.key.stop_text_input()

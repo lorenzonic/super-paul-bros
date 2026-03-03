@@ -116,6 +116,31 @@ canvas  {
   transition: background .2s;
 }
 #pb-fs-btn:hover { background: rgba(255,255,255,.30); }
+
+/* name input overlay (mobile web) */
+#pb-name-overlay {
+  display: none;
+  position: fixed; inset: 0; z-index: 9600;
+  background: rgba(0,8,32,.93);
+  flex-direction: column; align-items: center; justify-content: center;
+  font-family: 'Arial Black', Arial, sans-serif;
+}
+#pb-name-overlay.pb-visible { display: flex; }
+#pb-name-overlay h2 { color: #FFD700; font-size: 28px; margin-bottom: 8px; text-shadow: 2px 2px #8B0000; }
+#pb-name-overlay p  { color: #ccc; font-size: 14px; margin-bottom: 18px; font-family: Arial,sans-serif; }
+#pb-name-inp {
+  font-size: 24px; padding: 12px 18px; border-radius: 10px;
+  border: 3px solid #FFD700; background: #111830; color: #fff;
+  width: 270px; text-align: center; outline: none; letter-spacing: 2px;
+}
+#pb-name-inp::placeholder { color: #555; letter-spacing: 1px; }
+#pb-name-ok {
+  margin-top: 20px; padding: 14px 50px; font-size: 22px; font-weight: 900;
+  background: #27ae60; color: #fff; border: none; border-radius: 12px;
+  cursor: pointer; letter-spacing: 1px;
+  box-shadow: 0 4px 12px rgba(0,0,0,.5);
+}
+#pb-name-ok:active { background: #1e8449; }
 </style>
 """
 
@@ -164,7 +189,35 @@ JS = r"""
   window.addEventListener("resize", fixCanvas);
   window.addEventListener("orientationchange", function () { setTimeout(fixCanvas, 250); });
 
-  /* ── fullscreen ── */
+  /* ── name input overlay ── */
+  window.__pb_name_done  = false;
+  window.__pb_name_value = "Player";
+  window.__pb_overlay_active = false;
+  window.pbAskName = function () {
+    var ov  = document.getElementById("pb-name-overlay");
+    var inp = document.getElementById("pb-name-inp");
+    if (!ov || !inp) return;
+    inp.value = "";
+    window.__pb_name_done  = false;
+    window.__pb_overlay_active = true;
+    ov.classList.add("pb-visible");
+    setTimeout(function () { inp.focus(); inp.click(); }, 200);
+  };
+  function pbSubmitName() {
+    var inp = document.getElementById("pb-name-inp");
+    var ov  = document.getElementById("pb-name-overlay");
+    var val = (inp ? inp.value.trim() : "") || "Player";
+    window.__pb_name_value = val.substring(0, 12);
+    window.__pb_name_done  = true;
+    window.__pb_overlay_active = false;
+    if (ov) ov.classList.remove("pb-visible");
+  }
+  var _nBtn = document.getElementById("pb-name-ok");
+  var _nInp = document.getElementById("pb-name-inp");
+  if (_nBtn) _nBtn.addEventListener("pointerdown", function (e) { e.stopPropagation(); pbSubmitName(); }, { passive: false });
+  if (_nInp) _nInp.addEventListener("pointerdown", function (e) { e.stopPropagation(); }, { passive: false });
+  if (_nInp) _nInp.addEventListener("keydown",     function (e) { if (e.key === "Enter") { e.preventDefault(); pbSubmitName(); } });
+
   function enterFullscreen() {
     /* try multiple targets for cross-browser support */
     var targets = [document.documentElement, document.body, document.querySelector("canvas")];
@@ -293,8 +346,9 @@ JS = r"""
   }
 
   document.addEventListener("pointerdown", function (e) {
-    /* ignore if touch started on a dpad button or fs button */
-    if (e.target && e.target.closest && (e.target.closest("#pb-dpad") || e.target.closest("#pb-fs-btn"))) return;
+    /* ignore if touch started on a dpad button, fs button, or name overlay */
+    if (e.target && e.target.closest && (e.target.closest("#pb-dpad") || e.target.closest("#pb-fs-btn") || e.target.closest("#pb-name-overlay"))) return;
+    if (window.__pb_overlay_active) return;   /* name overlay shown: block game input */
     e.preventDefault();
     startX = e.clientX; startY = e.clientY;
     startTime = Date.now();
@@ -373,6 +427,13 @@ OVERLAY_HTML = """
   <div class="pb-btn" id="pb-btn-jump">&#9650; JUMP</div>
 </div>
 <div id="pb-fs-btn" title="Fullscreen">&#x26F6;</div>
+<div id="pb-name-overlay">
+  <h2>Super Paul Bros</h2>
+  <p>Enter your name to start</p>
+  <input type="text" id="pb-name-inp" maxlength="12" placeholder="Your name..."
+         autocomplete="off" autocorrect="off" autocapitalize="words" spellcheck="false">
+  <button id="pb-name-ok">PLAY !</button>
+</div>
 """
 
 # ── patch ────────────────────────────────────────────────────────────────────
