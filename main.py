@@ -583,13 +583,16 @@ class Game:
         self._cursor_visible = True
         self._waiting_web_name = False
         if _WEB:
+            # Check if it's mobile (touch device) before showing HTML overlay
             try:
                 import platform as _plat
-                _plat.window.eval("pbAskName()")
-                self._waiting_web_name = True
+                is_mobile = _plat.window.eval("(navigator.maxTouchPoints > 0) || /Mobi|Android/i.test(navigator.userAgent)")
+                if is_mobile:
+                    _plat.window.eval("pbAskName()")
+                    self._waiting_web_name = True
             except Exception:
                 pass
-        else:
+        if not self._waiting_web_name:
             pygame.key.start_text_input()
         self.state = STATE_NAME_INPUT
 
