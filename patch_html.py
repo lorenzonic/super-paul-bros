@@ -131,17 +131,7 @@ JS = r"""
   window.addEventListener("resize", scaleCanvas);
   window.addEventListener("orientationchange", function () { setTimeout(scaleCanvas, 250); });
 
-  /* ── fullscreen on first intentional tap ── */
-  /* Arm after 800 ms so the initial page-load pointer event is ignored */
-  var fsArmed = false;
-  setTimeout(function () { fsArmed = true; }, 800);
-  document.addEventListener("pointerup", function () {
-    if (!fsArmed) return;
-    fsArmed = false;
-    var el = document.documentElement;
-    var fn = el.requestFullscreen || el.webkitRequestFullscreen || el.mozRequestFullScreen;
-    if (fn) fn.call(el).catch(function(){});
-  }, { once: true });
+
 
   /* ══════════════════════════════════════════════
      SWIPE GESTURE CONTROLLER
