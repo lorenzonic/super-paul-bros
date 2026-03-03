@@ -765,7 +765,7 @@ class Player(pygame.sprite.Sprite):
 
         surf.blit(scaled, (0, 0))
 
-        if facing == -1:
+        if facing == 1:
             surf = pygame.transform.flip(surf, True, False)
 
         cls._img_cache[key] = surf
