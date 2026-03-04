@@ -14,6 +14,7 @@
 
 import os
 import sys
+import math
 import asyncio
 import pygame
 import random
@@ -22,7 +23,7 @@ from settings    import *
 from sprites     import (Player, Goomba, GroundTile, BrickTile, QuestionBlock,
                          PipeTile, Coin, Kostas, FlagPole, Cloud, ScorePopup,
                          OrchideeA2Popup, StarBlock, Star, BrickDebris, draw_text)
-from level_data  import LEVEL_1, PLAYER_START, CLOUDS
+from level_data  import LEVEL_1, LEVEL_2, CLOUDS_L2, PLAYER_START, CLOUDS
 from leaderboard import fetch_scores, post_score
 
 # ── Web (Pygbag) detection ───────────────────────────────
@@ -42,6 +43,7 @@ STATE_GAMEOVER    = "gameover"
 STATE_WIN         = "win"
 STATE_LEADERBOARD = "leaderboard"
 STATE_SAVING      = "saving"
+STATE_TRANSITION  = "transition"   # level 1 → level 2 cinematic
 
 
 # ── Camera ──────────────────────────────────────────────────
@@ -164,7 +166,9 @@ class VirtualKeys:
 
 
 # ── Level loader ─────────────────────────────────────────────
-def load_level(tile_map):
+def load_level(tile_map, cloud_data=None):
+    if cloud_data is None:
+        cloud_data = CLOUDS
     """
     Parse the tile_map list of strings and return sprite groups + metadata.
     Returns
@@ -257,7 +261,7 @@ def load_level(tile_map):
         all_sprites.add(flag)
 
     level_pix_w = cols * TILE_SIZE
-    clouds      = [Cloud(*c) for c in CLOUDS]
+    clouds      = [Cloud(*c) for c in cloud_data]
 
     return (solid_tiles, question_blocks, enemies, coins,
             all_sprites, flag, level_pix_w, clouds)
@@ -422,7 +426,30 @@ def draw_menu(surface, board):
                       f"{i+1}. {entry['name']}  {entry['score']:06d}",
                       16, SCREEN_WIDTH // 2, 400 + i * 22, medal_col[i], center=True)
 # ── Gradient sky ──────────────────────────────────────────────
-_sky_gradient = None
+_sky_gradient      = None
+_sky_gradient_dark = None
+
+def _draw_dark_sky(surface):
+    global _sky_gradient_dark
+    if _sky_gradient_dark is None:
+        _sky_gradient_dark = pygame.Surface((1, SCREEN_HEIGHT))
+        top    = (5,  5,  30)
+        bottom = (15, 5,  70)
+        for y in range(SCREEN_HEIGHT):
+            t = y / SCREEN_HEIGHT
+            r = int(top[0] + (bottom[0] - top[0]) * t)
+            g = int(top[1] + (bottom[1] - top[1]) * t)
+            b = int(top[2] + (bottom[2] - top[2]) * t)
+            _sky_gradient_dark.set_at((0, y), (r, g, b))
+    surface.blit(pygame.transform.scale(_sky_gradient_dark,
+                 (SCREEN_WIDTH, SCREEN_HEIGHT)), (0, 0))
+    # draw a few pixel stars for ambience
+    for i in range(40):
+        sx = (i * 397 + 53)  % SCREEN_WIDTH
+        sy = (i * 211 + 17)  % (SCREEN_HEIGHT // 2)
+        brightness = 160 + int(40 * math.sin(pygame.time.get_ticks() * 0.001 + i))
+        pygame.draw.circle(surface, (brightness, brightness, brightness), (sx, sy), 1)
+
 def _draw_gradient_sky(surface):
     global _sky_gradient
     if _sky_gradient is None:
@@ -445,8 +472,19 @@ class Game:
             os.environ.setdefault("SDL_VIDEO_CENTERED", "1")
         pygame.init()
         pygame.display.set_caption(TITLE)
-        self.screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
-        self.clock  = pygame.time.Clock()
+
+        # ── window size: desktop max 900px wide, height proportional ──
+        if not _WEB:
+            info  = pygame.display.Info()
+            win_w = min(900, info.current_w)
+            win_h = win_w * SCREEN_HEIGHT // SCREEN_WIDTH
+        else:
+            win_w, win_h = SCREEN_WIDTH, SCREEN_HEIGHT
+        self._win_size = (win_w, win_h)
+        self.screen    = pygame.display.set_mode(self._win_size)
+        # internal canvas always at logical resolution (800×600)
+        self._canvas   = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT))
+        self.clock     = pygame.time.Clock()
         self.state  = STATE_MENU
 
         # leaderboard (loaded async in background)
@@ -465,21 +503,29 @@ class Game:
         self._score      = 0
         self._lives      = STARTING_LIVES
         self._coins      = 0
-        self._dead_timer = 0
-        self._win_timer  = 0
+        self._dead_timer  = 0
+        self._win_timer   = 0
+        self._trans_timer = 0   # level-transition frames counter
 
         # touch controls
         self.touch = TouchControls()
 
         self._level_data = None
+        self._level_num  = 1
 
     # ── level init ───────────────────────────────────────────
 
     def _load_level(self):
+        if self._level_num == 2:
+            level_map   = LEVEL_2
+            cloud_data  = CLOUDS_L2
+        else:
+            level_map   = LEVEL_1
+            cloud_data  = CLOUDS
         (self.solid_tiles, self.question_blocks,
          self.enemies, self.coins_group,
          self.all_sprites, self.flag,
-         self.level_pix_w, self.clouds) = load_level(LEVEL_1)
+         self.level_pix_w, self.clouds) = load_level(level_map, cloud_data)
 
         col, row = PLAYER_START
         px = col * TILE_SIZE + TILE_SIZE // 2
@@ -492,6 +538,21 @@ class Game:
 
         # popup group (kept separate so it draws last)
         self.popups = pygame.sprite.Group()
+
+    # ── level transition / win ───────────────────────────────
+
+    def _trigger_win(self):
+        """Award end-of-level bonus then advance or declare final win."""
+        self._score += 5000
+        self._score_ref[0] = self._score
+        if self._level_num == 1:
+            # Show transition cinematic, then load level 2
+            self._level_num   = 2
+            self._trans_timer = 0
+            self.state        = STATE_TRANSITION
+        else:
+            self._won  = True
+            self.state = STATE_WIN
 
     # ── run ──────────────────────────────────────────────────
 
@@ -510,7 +571,7 @@ class Game:
                     except Exception:
                         pass
                     self._lb_fetch_task = None
-                draw_menu(self.screen, self._leaderboard)
+                draw_menu(self._canvas, self._leaderboard)
 
             elif self.state == STATE_NAME_INPUT:
                 # On web: poll JS overlay for submitted name
@@ -527,12 +588,21 @@ class Game:
                 if self._cursor_timer >= 30:
                     self._cursor_timer   = 0
                     self._cursor_visible = not self._cursor_visible
-                draw_name_input(self.screen, self._name_buf,
+                draw_name_input(self._canvas, self._name_buf,
                                 self._cursor_visible, self._leaderboard)
 
             elif self.state == STATE_PLAYING:
                 self._update()
                 self._draw()
+
+            elif self.state == STATE_TRANSITION:
+                self._trans_timer += 1
+                self._draw_transition()
+                # At frame 120 silently load level 2 (during the fade-in phase)
+                if self._trans_timer == 120:
+                    self._load_level()
+                if self._trans_timer >= 200:
+                    self.state = STATE_PLAYING
 
             elif self.state == STATE_DEAD:
                 self._draw()
@@ -552,7 +622,7 @@ class Game:
                 self.state = STATE_SAVING
 
             elif self.state == STATE_SAVING:
-                draw_saving(self.screen)
+                draw_saving(self._canvas)
                 if self._save_task and self._save_task.done():
                     try:
                         self._leaderboard = self._save_task.result() or []
@@ -562,9 +632,11 @@ class Game:
                     self.state = STATE_LEADERBOARD
 
             elif self.state == STATE_LEADERBOARD:
-                draw_leaderboard(self.screen, self._leaderboard,
+                draw_leaderboard(self._canvas, self._leaderboard,
                                  self._score, self._player_name, self._won)
 
+            # scale canvas to actual window and flip
+            pygame.transform.smoothscale(self._canvas, self._win_size, self.screen)
             pygame.display.flip()
             await asyncio.sleep(0)   # yield to browser / event loop
 
@@ -593,10 +665,11 @@ class Game:
     def _start_game(self):
         pygame.key.stop_text_input()
         self._player_name = self._name_buf.strip() or "Player"
-        self._score  = 0
-        self._lives  = STARTING_LIVES
-        self._coins  = 0
-        self._won    = False
+        self._score     = 0
+        self._lives     = STARTING_LIVES
+        self._coins     = 0
+        self._won       = False
+        self._level_num = 1
         self._load_level()
         self.touch.reset()
         self.state = STATE_PLAYING
@@ -681,7 +754,10 @@ class Game:
 
             # ── mouse click (desktop START / PLAY buttons) ───────────
             if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-                mx, my = event.pos
+                # scale window coords → canvas coords
+                _mx, _my = event.pos
+                mx = _mx * SCREEN_WIDTH  // self._win_size[0]
+                my = _my * SCREEN_HEIGHT // self._win_size[1]
                 if self.state == STATE_MENU:
                     if _MENU_START_BTN.collidepoint(mx, my):
                         self._go_name_input()
@@ -806,36 +882,106 @@ class Game:
         # -- player death (fell in pit or no lives) --
         if self.player.dead:
             if self.player.hitbox.top > SCREEN_HEIGHT + 100:
-                self._dead_timer = 90
-                self.state = STATE_DEAD
+                # If fell off the right end of the level → win instead
+                if self.player.hitbox.centerx >= self.level_pix_w - TILE_SIZE * 5:
+                    self._trigger_win()
+                else:
+                    self._dead_timer = 90
+                    self.state = STATE_DEAD
+            return
+
+        # -- right edge of level → win (walked/jumped past flag) --
+        if self.player.hitbox.right >= self.level_pix_w:
+            self._trigger_win()
             return
 
         # -- flag / win condition --
         if self.flag and self.player.hitbox.colliderect(self.flag.trigger_rect):
-            self._score += 5000
-            self._score_ref[0] = self._score
-            self._won = True
-            self.state = STATE_WIN
+            self._trigger_win()
 
-        # -- level boundary --
+        # -- level boundary (left) --
         if self.player.hitbox.left < 0:
             self.player.hitbox.left = 0
             self.player.rect.midbottom = self.player.hitbox.midbottom
 
     # ── draw ─────────────────────────────────────────────────
 
+    # ── transition cinematic ──────────────────────────────────────
+
+    def _draw_transition(self):
+        t  = self._trans_timer   # 0 → 200
+        cv = self._canvas
+
+        if t < 60:
+            # Phase 1 (0–60): day-sky fades to black
+            _draw_gradient_sky(cv)
+            alpha = int(t / 60 * 255)
+            veil  = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT))
+            veil.fill((0, 0, 0))
+            veil.set_alpha(alpha)
+            cv.blit(veil, (0, 0))
+
+        elif t < 120:
+            # Phase 2 (60–120): black with twinkling stars + title card
+            cv.fill((0, 0, 0))
+
+            # animated stars
+            for i in range(80):
+                sx = (i * 397 + 53)  % SCREEN_WIDTH
+                sy = (i * 211 + 17)  % SCREEN_HEIGHT
+                bri = 80 + int(130 * abs(math.sin(
+                    pygame.time.get_ticks() * 0.0025 + i)))
+                pygame.draw.circle(cv, (bri, bri, bri), (sx, sy), 1)
+
+            # text fade-in (frames 60–80 = 20 frames)
+            text_a = min(255, int((t - 60) / 20 * 255))
+
+            # purple glow line behind title
+            glow = pygame.Surface((480, 80), pygame.SRCALPHA)
+            glow.fill((120, 50, 200, 60))
+            cv.blit(glow, (SCREEN_WIDTH // 2 - 240,
+                           SCREEN_HEIGHT // 2 - 100))
+
+            def _txt(text, size, y, col):
+                ts  = pygame.font.SysFont("Arial Black", size, bold=True)
+                img = ts.render(text, True, col)
+                img.set_alpha(text_a)
+                cv.blit(img, img.get_rect(center=(SCREEN_WIDTH // 2, y)))
+
+            _txt("LIVELLO  2",      52, SCREEN_HEIGHT // 2 - 80, (220, 180, 255))
+            _txt("NOTTE  OSCURA",   40, SCREEN_HEIGHT // 2 - 20, (160,  80, 255))
+            _txt("Il buio cade su Paul Bros...", 18,
+                 SCREEN_HEIGHT // 2 + 44, (160, 160, 200))
+
+        else:
+            # Phase 3 (120–200): dark sky fades in from black
+            _draw_dark_sky(cv)
+            fade  = max(0, 200 - t)           # 80 → 0
+            alpha = int(fade / 80 * 255)
+            if alpha > 0:
+                veil = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT))
+                veil.fill((0, 0, 0))
+                veil.set_alpha(alpha)
+                cv.blit(veil, (0, 0))
+
+    # ── draw ──────────────────────────────────────────────────
+
     def _draw(self):
-        _draw_gradient_sky(self.screen)
+        cv = self._canvas
+        if self._level_num == 2:
+            _draw_dark_sky(cv)
+        else:
+            _draw_gradient_sky(cv)
 
         # clouds (parallax)
         for cloud in self.clouds:
-            cloud.draw(self.screen, self.camera.x)
+            cloud.draw(cv, self.camera.x)
 
         # all tile / enemy / coin sprites
         for spr in self.all_sprites:
             draw_rect = self.camera.apply(spr.rect)
             if -100 < draw_rect.x < SCREEN_WIDTH + 100:
-                self.screen.blit(spr.image, draw_rect)
+                cv.blit(spr.image, draw_rect)
 
         # player (draw with flicker if invincible)
         if not self.player.dead:
@@ -843,37 +989,33 @@ class Game:
             if self.player.invincible > 0:
                 show = (self.player.invincible // 5) % 2 == 0
             if show:
-                self.screen.blit(self.player.image,
-                                 self.camera.apply(self.player.rect))
+                cv.blit(self.player.image, self.camera.apply(self.player.rect))
 
         # popup score texts (no camera offset – drawn above tiles)
         for pop in self.popups:
-            # convert world-space to screen-space
-            screen_rect = self.camera.apply(pop.rect)
-            self.screen.blit(pop.image, screen_rect)
+            cv.blit(pop.image, self.camera.apply(pop.rect))
 
         # coins group (standing coins not in all_sprites)
         for c in self.coins_group:
-            self.screen.blit(c.image, self.camera.apply(c.rect))
+            cv.blit(c.image, self.camera.apply(c.rect))
 
         # HUD
-        draw_hud(self.screen, self._score, self._lives, self._coins,
-                 self._player_name)
+        draw_hud(cv, self._score, self._lives, self._coins, self._player_name)
 
         # touch controls (drawn only on desktop; browser uses HTML overlay buttons)
         if not _WEB:
-            self.touch.draw(self.screen)
+            self.touch.draw(cv)
 
         # dead screen overlay
         if self.state == STATE_DEAD:
             overlay = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT), pygame.SRCALPHA)
             overlay.fill((0, 0, 0, 100))
-            self.screen.blit(overlay, (0, 0))
-            draw_text(self.screen, "CONJO!", 60,
+            cv.blit(overlay, (0, 0))
+            draw_text(cv, "CONJO!", 60,
                       SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 - 40, RED, center=True)
             lives_msg = (f"Lives left: {self._lives}" if self._lives > 0
                          else "No lives left…")
-            draw_text(self.screen, lives_msg, 30,
+            draw_text(cv, lives_msg, 30,
                       SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 + 30, WHITE, center=True)
 
 
