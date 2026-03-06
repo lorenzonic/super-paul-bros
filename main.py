@@ -948,9 +948,9 @@ class Game:
                 img.set_alpha(text_a)
                 cv.blit(img, img.get_rect(center=(SCREEN_WIDTH // 2, y)))
 
-            _txt("LIVELLO  2",      52, SCREEN_HEIGHT // 2 - 80, (220, 180, 255))
-            _txt("NOTTE  OSCURA",   40, SCREEN_HEIGHT // 2 - 20, (160,  80, 255))
-            _txt("Il buio cade su Paul Bros...", 18,
+            _txt("Level  2",      52, SCREEN_HEIGHT // 2 - 80, (220, 180, 255))
+            _txt("Dark Night",   40, SCREEN_HEIGHT // 2 - 20, (160,  80, 255))
+            _txt("", 18,
                  SCREEN_HEIGHT // 2 + 44, (160, 160, 200))
 
         else:

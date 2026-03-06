@@ -58,39 +58,43 @@ CLOUDS = [
 ]
 
 # ── Level 2 – Notte Oscura ────────────────────────────────────
-# Dark theme: many wide pits, dense enemies, fewer safe spots.
-# Ground sections (cols): 0-11, 17-28, 34-45, 51-62, 68-79, 85-96, 102-113, 119-159
-# 7 pits (5 tiles wide each) at cols 12-16, 29-33, 46-50, 63-67, 80-84, 97-101, 114-118
+# Dark theme: Varied terrain, treacherous jumps, and verticality.
 
-_GROUND_L2 = "GGGGGGGGGGGG     " * 7 + "G" * 41   # 160 chars exactly
+# Ground pattern with pits
+# Pits at cols: 20-25 (5), 50-55 (5), 90-100 (10), 130-135 (5)
+_G1 = "G" * 20
+_P1 = " " * 5
+_G2 = "G" * 25
+_P2 = " " * 5
+_G3 = "G" * 35
+_P3 = " " * 10
+_G4 = "G" * 30
+_P4 = " " * 5
+_G5 = "G" * 25
+
+_GROUND_L2 = _G1 + _P1 + _G2 + _P2 + _G3 + _P3 + _G4 + _P4 + _G5
 
 LEVEL_2 = [
     _r(""),                                                                                  # row  0
     _r(""),                                                                                  # row  1
     _r(""),                                                                                  # row  2
-    _r("    K    K    K    K    K    K    K    K    K    K    K    K    K    K    K    K    K    K    K    K"),  # row  3  (20 K coins)
-    _r(""),                                                                                  # row  4
-    _r(""),                                                                                  # row  5
-    _r("  ?S?B    S?B?   B?B    ?S?B   B?BS   ?B?S   S?B?   B?B    ?S?B   B?BS"),           # row  6
-    _r("                     ____                 ____                 ____                 ____                 ____"),  # row  7
-    _r("  BBBBB           BBBBB           BBBBB           BBBBB           BBBBB           BBBBB           BBBBB"),        # row  8
-    _r(""),                                                                                  # row  9
-    # row 10: enemies (5-7 per solid section) + flag F at col 158
-    (  "  E E E E  E"   # sec0  cols  0-11
-     + "     "          # pit   cols 12-16
-     + "E  E  E  E  "   # sec1  cols 17-28
-     + "     "          # pit   cols 29-33
-     + " E E  E E  E"   # sec2  cols 34-45
-     + "     "          # pit   cols 46-50
-     + "EE  EE  E  E"   # sec3  cols 51-62
-     + "     "          # pit   cols 63-67
-     + "E  E  E  E  "   # sec4  cols 68-79
-     + "     "          # pit   cols 80-84
-     + " EE E  E E E"   # sec5  cols 85-96
-     + "     "          # pit   cols 97-101
-     + "E E  EE  E E"   # sec6  cols 102-113
-     + "     "          # pit   cols 114-118
-     + "  E  E  E  E  E  E  E  E  E  E  E  E   F "  # finale cols 119-159 (41 chars, F at col 158)
+    _r("                    KKK                         KKK                         KKK                         KKK                         KK"),
+    _r("                                                                                    BBBBB                        "),
+    _r("         K           BBBBB            K          BBBBB                  K                           K                           K                 "),
+    _r("        BBB                    BBB                         BBB             ___ ___     BBB                         BBB                "),
+    _r("                     ___                                                                                                          "),
+    _r("                 T      T              T       T                  T       T                  T       T                  T         "),
+    _r("                                                                                                                                  "),
+    # Row 10: Enemies and obstacles on the ground layer
+    (   "      E   ?   E     "     # 20 (Sec 1)
+      + "     "                   # 5  (Pit 1)
+      + "  T    K    ?    E   T  " # 25 (Sec 2)
+      + " ___ "                   # 5  (Pit 2 platform)
+      + "   E   B?B   E     S     E     " # 35 (Sec 3)
+      + " _  __  _ "              # 10 (Pit 3 platforms)
+      + "     T    E      E      T     "  # 30 (Sec 4)
+      + "     "                   # 5  (Pit 4)
+      + "  E      E         F     "   # 25 (Sec 5)
     ),
     _GROUND_L2,   # row 11
     _GROUND_L2,   # row 12
