@@ -445,7 +445,7 @@ def draw_menu(surface, board):
               18, SCREEN_WIDTH // 2, 320, GRAY,   center=True)
     draw_text(surface, "Stomp enemies \u00b7 collect coins \u00b7 reach the flag!",
               16, SCREEN_WIDTH // 2, 345, GRAY,   center=True)
-    draw_text(surface, "CTRL+P  →  skip to level 3",
+    draw_text(surface, "",
               14, SCREEN_WIDTH // 2, 368, (120, 80, 200), center=True)
 
     if board:
@@ -779,7 +779,7 @@ class Game:
                     elif event.key == pygame.K_l:
                         self.state = STATE_LEADERBOARD
                     elif event.key == pygame.K_p and pygame.key.get_mods() & pygame.KMOD_CTRL:
-                        # Cheat: Ctrl+P → skip to level 3
+                        
                         self._name_buf = "Cheater"
                         self._start_game(start_level=3)
 

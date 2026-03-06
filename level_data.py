@@ -57,7 +57,7 @@ CLOUDS = [
     (5500, 40, 0.8), (5900, 70, 1.1), (6300, 55, 0.9),
 ]
 
-# ── Level 2 – Notte Oscura ────────────────────────────────────
+# ── Level 2 – Dark Night ────────────────────────────────────
 # Dark theme: Varied terrain, treacherous jumps, and verticality.
 
 # Ground pattern with pits
@@ -121,7 +121,7 @@ LEVEL_3 = [
     _r(""),
     _r("      ?   B?B     ?   B?B     ?   B?B     ?   B?B     ?   B?B     ?   B?B     ?   B?B     ?   B?B"),
     _r(""),
-    _r("    _   _     _   _     _   _     _   _     _   _     _   _     _   _     _   _     _   _     _   _"),
+    _r("    "),
     _r("      E         E         E         E         E         E         E         E         E         E"),
     _r("   BBB       BBB       BBB       BBB       BBB       BBB       BBB       BBB       BBB       BBB"),
     # Row 11: The "Floor" (broken into islands)
