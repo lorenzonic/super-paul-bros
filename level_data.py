@@ -175,3 +175,55 @@ CLOUDS_L3 = [
     (5400, 50, 1.2), (5700, 80, 1.0),
     (6000, 40, 1.1), (6300, 60, 0.9),
 ]
+
+# ── Level 4 – La Pizzeria ──────────────────────────────────
+# Indoor pizzeria theme: solid ground throughout (no pits),
+# wide table platforms to jump on, oven pipe pillars as obstacles,
+# ingredient question-blocks, and PizzaEnemy bosses that throw slices.
+#
+# Tile layout (all rows padded to 160 chars by _r()):
+#   Row 2  – K coins hovering above each table
+#   Row 4  – Table platforms (6 × 6-wide __)
+#   Row 5  – B?B / SB? ingredient blocks between tables
+#   Row 6  – ? single blocks above the gaps
+#   Row 8  – T oven-pipe tops (decorative + solid obstacles)
+#   Row 10 – 6 PizzaEnemy spawns + Flag
+#   Rows 11-14 – solid ground
+
+LEVEL_4 = [
+    _r(""),                                                    # row 0
+    _r(""),                                                    # row 1
+    # K coins floating above each table position
+    _r(" "*15 + "KK" + " "*17 + "KK" + " "*17 + "KK" +
+       " "*17 + "KK" + " "*17 + "KK" + " "*17 + "KK"),        # row 2
+    _r(""),                                                    # row 3
+    # 6 wide table platforms evenly spaced
+    _r(" "*12 + "______" + " "*14 + "______" + " "*14 + "______" +
+       " "*14 + "______" + " "*14 + "______" + " "*14 + "______"),   # row 4
+    # ingredient / power-up blocks between the tables
+    _r(" "*26 + "B?B" + " "*37 + "SB?" + " "*37 + "B?B"),     # row 5
+    # single ? blocks (pizza topping power-ups!)
+    _r(" "*15 + "?" + " "*19 + "?" + " "*19 + "?" +
+       " "*19 + "?" + " "*19 + "?" + " "*19 + "?"),            # row 6
+    _r(""),                                                    # row 7
+    # Oven / forno pipe-tops as pillars
+    _r(" "*14 + "T" + " "*19 + "T" + " "*19 + "T" + " "*19 +
+       "T" + " "*19 + "T" + " "*19 + "T" + " "*19 + "T"),     # row 8
+    _r(""),                                                    # row 9
+    # 6 PizzaEnemy spawns spaced 20 tiles apart; Flag near the end
+    _r(" "*5 + "E" + " "*19 + "E" + " "*19 + "E" + " "*19 +
+       "E" + " "*19 + "E" + " "*19 + "E" + " "*44 + "F"),     # row 10
+    "G" * 160,                                                 # row 11
+    "G" * 160,                                                 # row 12
+    "G" * 160,                                                 # row 13
+    "G" * 160,                                                 # row 14
+]
+
+# Steam-puff "clouds" (warm, subtle – indoor pizzeria atmosphere)
+CLOUDS_L4 = [
+    (150,  45, 0.5), (450,  30, 0.4), (800,  50, 0.5),
+    (1150, 35, 0.4), (1500, 48, 0.5), (1900, 28, 0.4),
+    (2300, 42, 0.5), (2700, 35, 0.4), (3200, 50, 0.5),
+    (3700, 30, 0.4), (4200, 45, 0.5), (4700, 32, 0.4),
+    (5200, 48, 0.5), (5700, 28, 0.4), (6200, 42, 0.5),
+]

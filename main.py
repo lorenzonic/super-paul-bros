@@ -20,10 +20,11 @@ import pygame
 import random
 
 from settings    import *
-from sprites     import (Player, Goomba, Piggy, GroundTile, BrickTile, QuestionBlock,
+from sprites     import (Player, Goomba, Piggy, PizzaEnemy, PizzaSlice, GroundTile, BrickTile, QuestionBlock,
                          PipeTile, Coin, Kostas, FlagPole, Cloud, ScorePopup,
                          OrchideeA2Popup, StarBlock, Star, BrickDebris, draw_text)
-from level_data  import (LEVEL_1, LEVEL_2, LEVEL_3, CLOUDS_L2, CLOUDS_L3,
+from level_data  import (LEVEL_1, LEVEL_2, LEVEL_3, LEVEL_4,
+                         CLOUDS_L2, CLOUDS_L3, CLOUDS_L4,
                          PLAYER_START, CLOUDS)
 from leaderboard import fetch_scores, post_score
 
@@ -237,7 +238,12 @@ def load_level(tile_map, cloud_data=None, level_num=1):
 
             elif ch == 'E':
                 # enemy spawns at bottom of cell (standing on ground)
-                EnemyCls = Piggy if level_num == 3 else Goomba
+                if level_num == 4:
+                    EnemyCls = PizzaEnemy
+                elif level_num == 3:
+                    EnemyCls = Piggy
+                else:
+                    EnemyCls = Goomba
                 e = EnemyCls(x + TILE_SIZE // 2, (row_i + 1) * TILE_SIZE)
                 enemies.add(e)
                 # NOT added to all_sprites yet; done separately so they draw on top
@@ -495,6 +501,38 @@ def _draw_gradient_sky(surface):
     surface.blit(pygame.transform.scale(_sky_gradient, (SCREEN_WIDTH, SCREEN_HEIGHT)), (0, 0))
 
 
+# ── Pizzeria background ───────────────────────────────────────
+_pizzeria_bg_cache = None
+
+def _draw_pizzeria_bg(surface):
+    """Warm restaurant interior background – brick walls, tiled floor. Cached."""
+    global _pizzeria_bg_cache
+    if _pizzeria_bg_cache is None:
+        bg = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT))
+        # warm cream base
+        bg.fill((255, 220, 160))
+        # brick pattern on walls
+        bw, bh = 46, 22
+        for row in range(SCREEN_HEIGHT // bh + 2):
+            off = (row % 2) * (bw // 2)
+            for col in range(-1, SCREEN_WIDTH // bw + 2):
+                c = (200, 110, 70) if (row + col) % 2 == 0 else (225, 138, 86)
+                pygame.draw.rect(bg, c, (col * bw + off, row * bh, bw - 2, bh - 2))
+        # darker tiled floor strip at the bottom
+        pygame.draw.rect(bg, (170, 110, 70),
+                         (0, SCREEN_HEIGHT - 60, SCREEN_WIDTH, 60))
+        for i in range(SCREEN_WIDTH // 40 + 2):
+            pygame.draw.line(bg, (145, 90, 55),
+                             (i * 40, SCREEN_HEIGHT - 60),
+                             (i * 40, SCREEN_HEIGHT), 1)
+        for j in range(2):
+            pygame.draw.line(bg, (145, 90, 55),
+                             (0, SCREEN_HEIGHT - 60 + j * 30),
+                             (SCREEN_WIDTH, SCREEN_HEIGHT - 60 + j * 30), 1)
+        _pizzeria_bg_cache = bg
+    surface.blit(_pizzeria_bg_cache, (0, 0))
+
+
 # ── Main Game class ───────────────────────────────────────────
 class Game:
     def __init__(self):
@@ -553,6 +591,9 @@ class Game:
         elif self._level_num == 3:
             level_map   = LEVEL_3
             cloud_data  = CLOUDS_L3
+        elif self._level_num == 4:
+            level_map   = LEVEL_4
+            cloud_data  = CLOUDS_L4
         else:
             level_map   = LEVEL_1
             cloud_data  = CLOUDS
@@ -587,6 +628,11 @@ class Game:
         elif self._level_num == 2:
             # Show transition cinematic, then load level 3
             self._level_num   = 3
+            self._trans_timer = 0
+            self.state        = STATE_TRANSITION
+        elif self._level_num == 3:
+            # Show transition cinematic, then load level 4
+            self._level_num   = 4
             self._trans_timer = 0
             self.state        = STATE_TRANSITION
         else:
@@ -865,6 +911,19 @@ class Game:
         for enemy in list(self.enemies):
             enemy.update(solid_list)
 
+        # -- pizza slices (level-4 projectiles) --
+        for enemy in list(self.enemies):
+            if hasattr(enemy, 'slices'):
+                for slc in list(enemy.slices):
+                    slc.update(solid_list)
+                    if not self.player.dead and self.player.invincible == 0:
+                        if self.player.hitbox.colliderect(slc.rect):
+                            slc.kill()
+                            if self.player.hurt():
+                                self._lives -= 1
+                                if self._lives <= 0:
+                                    self.player.trigger_death()
+
         # -- popup texts --
         self.popups.update()
 
@@ -976,6 +1035,8 @@ class Game:
             # Phase 1 (0–60): previous level fades to black
             if self._level_num == 3:
                 _draw_dark_sky(cv)
+            elif self._level_num == 4:
+                _draw_gradient_sky(cv)   # previous was level 3 (sky)
             else:
                 _draw_gradient_sky(cv)
 
@@ -1012,7 +1073,10 @@ class Game:
                 img.set_alpha(text_a)
                 cv.blit(img, img.get_rect(center=(SCREEN_WIDTH // 2, y)))
 
-            if self._level_num == 3:
+            if self._level_num == 4:
+                _txt("Level  4",      52, SCREEN_HEIGHT // 2 - 80, (255, 200,  50))
+                _txt("la pizzeria",   40, SCREEN_HEIGHT // 2 - 20, (230,  70,  20))
+            elif self._level_num == 3:
                 _txt("Level  3",      52, SCREEN_HEIGHT // 2 - 80, (220, 180, 255))
                 _txt("infinity sky", 40, SCREEN_HEIGHT // 2 - 20, (160,  80, 255))
             else:
@@ -1022,9 +1086,11 @@ class Game:
                  SCREEN_HEIGHT // 2 + 44, (160, 160, 200))
 
         else:
-            # Phase 3 (120–200): new level's sky fades in
+            # Phase 3 (120–200): new level's background fades in
             if self._level_num == 2:
                 _draw_dark_sky(cv)
+            elif self._level_num == 4:
+                _draw_pizzeria_bg(cv)
             else:
                 _draw_gradient_sky(cv)
             fade  = max(0, 200 - t)           # 80 → 0
@@ -1041,6 +1107,8 @@ class Game:
         cv = self._canvas
         if self._level_num == 2:
             _draw_dark_sky(cv)
+        elif self._level_num == 4:
+            _draw_pizzeria_bg(cv)
         else:
             _draw_gradient_sky(cv)
 
@@ -1053,6 +1121,14 @@ class Game:
             draw_rect = self.camera.apply(spr.rect)
             if -100 < draw_rect.x < SCREEN_WIDTH + 100:
                 cv.blit(spr.image, draw_rect)
+
+        # pizza slices (level 4 projectiles – drawn above tiles, below player)
+        for enemy in self.enemies:
+            if hasattr(enemy, 'slices'):
+                for slc in enemy.slices:
+                    draw_rect = self.camera.apply(slc.rect)
+                    if -100 < draw_rect.x < SCREEN_WIDTH + 100:
+                        cv.blit(slc.image, draw_rect)
 
         # player (draw with flicker if invincible)
         if not self.player.dead:

@@ -62,8 +62,9 @@ def _get_patrice_image():
     return raw
 
 
-_orchidee_cache  = None
+_orchidee_cache     = None
 _piggy_frames_cache = None   # None = not attempted; False = not found; list = frames
+_pizza_img_cache    = None   # cached pizza.png surface
 
 
 def _load_gif_frames(path):
@@ -118,6 +119,22 @@ def _get_orchidee_image():
     raw = pygame.image.load(path).convert_alpha()
     _strip_white_bg(raw)
     _orchidee_cache = raw
+    return raw
+
+
+def _get_pizza_image():
+    """Load assets/pizza.png once, strip white background, return Surface or None."""
+    global _pizza_img_cache
+    if _pizza_img_cache is not None:
+        return _pizza_img_cache if _pizza_img_cache else None
+    path = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                        "assets", "pizza.png")
+    if not os.path.exists(path):
+        _pizza_img_cache = False
+        return None
+    raw = pygame.image.load(path).convert_alpha()
+    _strip_white_bg(raw)
+    _pizza_img_cache = raw
     return raw
 
 
@@ -776,6 +793,100 @@ class Piggy(Goomba):
                 if frames:
                     self._gif_frame = (self._gif_frame + 1) % len(frames)
                     self._draw_alive()
+
+
+# ── PizzaSlice – flying projectile thrown by PizzaEnemy ────
+
+class PizzaSlice(pygame.sprite.Sprite):
+    """A spinning pizza-slice projectile thrown by PizzaEnemy."""
+
+    SPEED = 4.5
+
+    def __init__(self, x, y, direction):
+        super().__init__()
+        self._angle     = 0
+        self._direction = direction   # +1 right / -1 left
+        self.vx = self.SPEED * direction
+        self.vy = -1.5   # slight upward arc at launch
+        w = h = 28
+        img = _get_pizza_image()
+        if img:
+            self._base = pygame.transform.smoothscale(img, (w, h)).copy()
+        else:
+            # fallback: draw a simple triangular slice
+            self._base = pygame.Surface((w, h), pygame.SRCALPHA)
+            pygame.draw.polygon(self._base, (230, 130, 30),
+                                [(w // 2, 0), (0, h), (w, h)])
+        self.image = self._base.copy()
+        self.rect  = self.image.get_rect(center=(x, y))
+
+    def update(self, solid_tiles=None):
+        # gentle arc (less gravity than the player)
+        self.vy = min(self.vy + GRAVITY * 0.4, MAX_FALL_SPEED * 0.4)
+        self.rect.x += int(self.vx)
+        self.rect.y += int(self.vy)
+        # spinning animation
+        self._angle = (self._angle + 9 * self._direction) % 360
+        self.image  = pygame.transform.rotate(self._base, self._angle)
+        old_center  = self.rect.center
+        self.rect   = self.image.get_rect(center=old_center)
+        # despawn when well off-screen
+        if (self.rect.right < -200 or self.rect.left > 160 * TILE_SIZE
+                or self.rect.top > SCREEN_HEIGHT + 100):
+            self.kill()
+            return
+        # despawn when hitting a solid tile
+        if solid_tiles:
+            for tile in solid_tiles:
+                if self.rect.colliderect(tile.rect):
+                    self.kill()
+                    return
+
+
+# ── PizzaEnemy – Level 4 pizza-throwing boss ────────────────
+
+class PizzaEnemy(Goomba):
+    """Level-4 enemy: displayed as pizza.png, throws spinning pizza slices."""
+
+    SHOOT_INTERVAL = 110   # frames between shots (~1.8 s at 60 fps)
+
+    def __init__(self, x, y):
+        # slices and timer must be set BEFORE super().__init__() because
+        # Goomba.__init__ calls _draw_alive() immediately.
+        self.slices       = pygame.sprite.Group()
+        self._shoot_timer = random.randint(0, 80)   # stagger first shots
+        super().__init__(x, y)
+
+    def _draw_alive(self):
+        img = _get_pizza_image()
+        if img:
+            w, h = self.SPRITE_W, self.SPRITE_H
+            scaled = pygame.transform.smoothscale(img, (w, h))
+            self.image.fill((0, 0, 0, 0))
+            self.image.blit(scaled, (0, 0))
+        else:
+            super()._draw_alive()
+
+    def _draw_stomped(self):
+        img = _get_pizza_image()
+        if img:
+            w, h = self.SPRITE_W, self.SPRITE_H
+            squished = pygame.transform.smoothscale(img, (w - 4, 14))
+            self.image.fill((0, 0, 0, 0))
+            self.image.blit(squished, (2, h - 16))
+        else:
+            super()._draw_stomped()
+
+    def update(self, solid_tiles):
+        super().update(solid_tiles)
+        if self.alive_flag:
+            self._shoot_timer += 1
+            if self._shoot_timer >= self.SHOOT_INTERVAL:
+                self._shoot_timer = 0
+                direction = 1 if self.vx >= 0 else -1
+                cx = self.rect.right if direction > 0 else self.rect.left
+                slc = PizzaSlice(cx, self.rect.centery, direction)
+                self.slices.add(slc)
 
 
 # ── Player ──────────────────────────────────────────────────
