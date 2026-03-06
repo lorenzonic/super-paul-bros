@@ -828,9 +828,11 @@ class Game:
                     elif event.key == pygame.K_l:
                         self.state = STATE_LEADERBOARD
                     elif event.key == pygame.K_p and pygame.key.get_mods() & pygame.KMOD_CTRL:
-                        
                         self._name_buf = "Cheater"
                         self._start_game(start_level=3)
+                    elif event.key == pygame.K_s and pygame.key.get_mods() & pygame.KMOD_CTRL:
+                        self._name_buf = "Cheater"
+                        self._start_game(start_level=4)
 
                 elif self.state == STATE_NAME_INPUT:
                     if event.key == pygame.K_RETURN:
