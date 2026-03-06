@@ -391,7 +391,7 @@ def draw_menu(surface, board):
 
     draw_text(surface, "SUPER PAUL BROS",
               78, SCREEN_WIDTH // 2, 60, YELLOW, center=True)
-    draw_text(surface, "World  1 - 1",
+    draw_text(surface, "World  1 - 2",
               30, SCREEN_WIDTH // 2, 140, WHITE,  center=True)
 
     # ── big START button ──
