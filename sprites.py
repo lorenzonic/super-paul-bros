@@ -394,6 +394,39 @@ class Star(pygame.sprite.Sprite):
             self.kill()
 
 
+# ── MusclePill – ground pickup that grants Muscle Power ─────
+
+class MusclePill(pygame.sprite.Sprite):
+    """Collectible pill on the ground. Grants muscle power for 10 seconds."""
+
+    def __init__(self, x, y):
+        super().__init__()
+        self._t      = 0
+        self._base_y = y
+        self.image   = self._make_image()
+        self.rect    = self.image.get_rect(midbottom=(x, y))
+
+    @staticmethod
+    def _make_image():
+        w, h = 18, 34
+        surf = pygame.Surface((w, h), pygame.SRCALPHA)
+        # top half red, bottom half white – classic Italian pill
+        pygame.draw.rect(surf, (220, 35, 35),  (0, 0,      w, h // 2), border_radius=10)
+        pygame.draw.rect(surf, (240, 240, 240), (0, h // 2, w, h // 2), border_radius=10)
+        # outline
+        pygame.draw.rect(surf, (150, 15, 15), (0, 0, w, h), 2, border_radius=10)
+        # dividing line
+        pygame.draw.line(surf, (180, 180, 180), (1, h // 2), (w - 1, h // 2), 1)
+        # glint on top half
+        pygame.draw.circle(surf, (255, 120, 120, 160), (w // 3, h // 5), 3)
+        return surf
+
+    def update(self):
+        self._t += 1
+        bob = int(3 * math.sin(self._t * 0.08))
+        self.rect.midbottom = (self.rect.centerx, self._base_y + bob)
+
+
 class PipeTile(pygame.sprite.Sprite):
     """A pipe section (top or body). top=True draws the opening cap."""
 
@@ -927,9 +960,10 @@ class Player(pygame.sprite.Sprite):
 
         # damage
         self.invincible  = 0        # countdown in frames
-        self.dead        = False
-        self._death_vy   = -12
-        self.star_powered = 0       # countdown frames (600 = 10 s)
+        self.dead          = False
+        self._death_vy     = -12
+        self.star_powered  = 0   # countdown frames (600 = 10 s)
+        self.muscle_powered = 0  # countdown frames (600 = 10 s)
 
         self.image = self._render("idle", 1)
         self.rect  = self.image.get_rect(midbottom=(x, y))
@@ -943,8 +977,8 @@ class Player(pygame.sprite.Sprite):
     # ── rendering ────────────────────────────────────────────
 
     @classmethod
-    def _render(cls, state, facing, walk_frame=0, star=False):
-        key = (state, facing, walk_frame if state == "walk" else 0, star)
+    def _render(cls, state, facing, walk_frame=0, star=False, muscle=False):
+        key = (state, facing, walk_frame if state == "walk" else 0, star, muscle)
         if key in cls._img_cache:
             return cls._img_cache[key]
 
@@ -966,6 +1000,12 @@ class Player(pygame.sprite.Sprite):
             tint.fill((255, 220, 0, 80))
             scaled.blit(tint, (0, 0), special_flags=pygame.BLEND_RGBA_ADD)
 
+        # muscle-power: red tint overlay
+        if muscle:
+            tint = pygame.Surface((W, H), pygame.SRCALPHA)
+            tint.fill((220, 40, 40, 90))
+            scaled.blit(tint, (0, 0), special_flags=pygame.BLEND_RGBA_ADD)
+
         surf.blit(scaled, (0, 0))
 
         if facing == 1:
@@ -984,6 +1024,8 @@ class Player(pygame.sprite.Sprite):
 
         if self.star_powered > 0:
             self.star_powered -= 1
+        if self.muscle_powered > 0:
+            self.muscle_powered -= 1
 
         self._handle_input(keys)
         self._apply_physics()
@@ -1138,7 +1180,8 @@ class Player(pygame.sprite.Sprite):
         self.rect.midbottom = self.hitbox.midbottom
 
     def _animate(self):
-        star = self.star_powered > 0
+        star   = self.star_powered > 0
+        muscle = self.muscle_powered > 0
         if self.on_ground:
             if abs(self.vx) > 0.1:
                 self._state   = "walk"
@@ -1152,7 +1195,8 @@ class Player(pygame.sprite.Sprite):
         else:
             self._state = "jump" if self.vy < 0 else "fall"
 
-        base = self._render(self._state, self.facing, self._walk_frame, star=star)
+        base = self._render(self._state, self.facing, self._walk_frame,
+                            star=star, muscle=muscle)
 
         if star:
             # draw golden pulsing aura around sprite
@@ -1171,9 +1215,33 @@ class Player(pygame.sprite.Sprite):
                 canvas.blit(aura, (pad + bw // 2 - rw,
                                    pad + bh // 2 - rh))
             canvas.blit(base, (pad, pad))
-            # keep rect centered on hitbox
             self.image = canvas
             self.rect  = canvas.get_rect(midbottom=self.hitbox.midbottom)
+
+        elif muscle:
+            # draw red pulsing aura + bicep muscles on sides
+            bw, bh = base.get_size()
+            pad    = 22
+            canvas = pygame.Surface((bw + pad * 2, bh + pad * 2), pygame.SRCALPHA)
+            t = pygame.time.get_ticks()
+            for layer, (rw_add, rh_add, alpha) in enumerate(
+                    [(18, 16, 45), (12, 10, 75), (7, 6, 110)]):
+                pulse = 1.0 + 0.10 * math.sin(t * 0.009 + layer)
+                rw = int((bw // 2 + rw_add) * pulse)
+                rh = int((bh // 2 + rh_add) * pulse)
+                aura = pygame.Surface((rw * 2, rh * 2), pygame.SRCALPHA)
+                pygame.draw.ellipse(aura, (255, 60, 60, alpha),
+                                    (0, 0, rw * 2, rh * 2))
+                canvas.blit(aura, (pad + bw // 2 - rw, pad + bh // 2 - rh))
+            # bicep circles on both sides
+            arm_y = pad + bh // 3
+            for arm_x in (pad - 8, pad + bw + 8):
+                pygame.draw.circle(canvas, (210, 35, 35), (arm_x, arm_y), 17)
+                pygame.draw.circle(canvas, (255, 100, 80), (arm_x - 4, arm_y - 5), 7)
+            canvas.blit(base, (pad, pad))
+            self.image = canvas
+            self.rect  = canvas.get_rect(midbottom=self.hitbox.midbottom)
+
         else:
             self.image = base
             self.rect  = base.get_rect(midbottom=self.hitbox.midbottom)

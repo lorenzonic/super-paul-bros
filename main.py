@@ -20,7 +20,8 @@ import pygame
 import random
 
 from settings    import *
-from sprites     import (Player, Goomba, Piggy, PizzaEnemy, PizzaSlice, GroundTile, BrickTile, QuestionBlock,
+from sprites     import (Player, Goomba, Piggy, PizzaEnemy, PizzaSlice,
+                         MusclePill, GroundTile, BrickTile, QuestionBlock,
                          PipeTile, Coin, Kostas, FlagPole, Cloud, ScorePopup,
                          OrchideeA2Popup, StarBlock, Star, BrickDebris, draw_text)
 from level_data  import (LEVEL_1, LEVEL_2, LEVEL_3, LEVEL_4,
@@ -235,6 +236,11 @@ def load_level(tile_map, cloud_data=None, level_num=1):
                 t = _PlatformTile(col_i, row_i)
                 solid_tiles.add(t)
                 all_sprites.add(t)
+
+            elif ch == 'M':
+                # muscle pill – rests on the ground (bottom at next row)
+                p = MusclePill(x + TILE_SIZE // 2, (row_i + 1) * TILE_SIZE)
+                all_sprites.add(p)
 
             elif ch == 'E':
                 # enemy spawns at bottom of cell (standing on ground)
@@ -994,6 +1000,8 @@ class Game:
         for spr in list(self.all_sprites):
             if isinstance(spr, Star):
                 spr.update(list(self.solid_tiles))
+            elif isinstance(spr, MusclePill):
+                spr.update()
             elif isinstance(spr, (ScorePopup, OrchideeA2Popup, BrickDebris)):
                 spr.update()
 
@@ -1005,6 +1013,16 @@ class Game:
                 popup = ScorePopup(self.player.rect.centerx,
                                    self.player.rect.top - 10,
                                    "SUPER PAUL!", (255, 220, 0), size=28)
+                self.popups.add(popup)
+
+        # -- muscle pill pickup --
+        for spr in list(self.all_sprites):
+            if isinstance(spr, MusclePill) and self.player.hitbox.colliderect(spr.rect):
+                spr.kill()
+                self.player.muscle_powered = 600   # 10 seconds
+                popup = ScorePopup(self.player.rect.centerx,
+                                   self.player.rect.top - 10,
+                                   "MUSCLE PAUL!", (255, 60, 60), size=28)
                 self.popups.add(popup)
 
         # -- enemies --
@@ -1066,8 +1084,8 @@ class Game:
                 if not enemy.alive_flag:
                     continue
                 if self.player.hitbox.colliderect(enemy.rect):
-                    if self.player.star_powered > 0:
-                        # star power: kill enemy on any contact
+                    if self.player.star_powered > 0 or self.player.muscle_powered > 0:
+                        # super/muscle power: kill enemy on any contact
                         enemy.stomp()
                         self.player.vy = JUMP_SPEED * 0.4
                         self._score += 200

@@ -12,6 +12,7 @@
 #    E  = Goomba spawn (replaced by sprite, not a tile)
 #    C  = coin pickup
 #    K  = Kostas coin (+100 pts, gold coin with K)
+#    M  = Muscle Pill (ground pickup, grants muscle power 10 s)
 #    F  = flag-pole spawn position (decorative, triggers win)
 #    (space) = empty
 #
@@ -84,7 +85,7 @@ LEVEL_2 = [
     _r("        BBB                    BBB                         BBB             ___ ___     BBB                         BBB                "),
     _r("                     ___                                                                                                          "),
     _r("                 T      T              T       T                  T       T                  T       T                  T         "),
-    _r("                                                                                                                                  "),
+    _r(" " * 8 + "M" + " " * 61 + "M" + " " * 39 + "M"),  # row 9 – muscle pills
     # Row 10: Enemies and obstacles on the ground layer
     (   "      E   ?   E     "     # 20 (Sec 1)
       + "     "                   # 5  (Pit 1)
@@ -155,7 +156,7 @@ LEVEL_3 = [
     _BRIDGES_L3,                                                                         # row 8
     _r(""),                                                                               # row 9
     # Enemies on islands (1 per island), Flag on last island (row 10)
-    _r(" "*3  + "E" + " "*13 + "E" + " "*10 + "E" + " "*12 + "E" +
+    _r("E" + " "*13 + "E" + " "*10 + "E" + " "*12 + "E" +
        " "*12 + "E" + " "*12 + "E" + " "*12 + "E" + " "*13 + "E" +
        " "*13 + "E" + " "*46 + "F"),
     _GROUND_L3,   # row 11
