@@ -72,10 +72,13 @@ def _load_gif_frames(path):
     try:
         from PIL import Image as PILImage
         pil_img = PILImage.open(path)
+        pil_img.seek(0)   # start from the beginning
         frames = []
         try:
             while True:
-                frame = pil_img.copy().convert("RGBA")
+                # Do NOT use .copy() before convert: PIL internally composites each
+                # frame on top of previous ones; copying breaks delta-encoded GIFs.
+                frame = pil_img.convert("RGBA")
                 w, h  = frame.size
                 surf  = pygame.image.fromstring(frame.tobytes(), (w, h), "RGBA").convert_alpha()
                 frames.append(surf)
@@ -754,7 +757,7 @@ class Goomba(pygame.sprite.Sprite):
 class Piggy(Goomba):
     """Level-3 enemy: cycles through piggy.gif frames; same physics as Goomba."""
 
-    FRAME_DURATION = 6   # game ticks per GIF frame
+    FRAME_DURATION = 3   # game ticks per GIF frame (~20 fps animation at 60 fps)
 
     def __init__(self, x, y):
         # must be set BEFORE super().__init__() because it calls _draw_alive()
