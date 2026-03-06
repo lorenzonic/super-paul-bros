@@ -554,6 +554,11 @@ class Game:
             self._level_num   = 2
             self._trans_timer = 0
             self.state        = STATE_TRANSITION
+        elif self._level_num == 2:
+            # Show transition cinematic, then load level 3
+            self._level_num   = 3
+            self._trans_timer = 0
+            self.state        = STATE_TRANSITION
         else:
             self._won  = True
             self.state = STATE_WIN
