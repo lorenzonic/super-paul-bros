@@ -1128,7 +1128,7 @@ class Player(pygame.sprite.Sprite):
         to_smash_h = []
         for tile in solid_tiles:
             if self.hitbox.colliderect(tile.rect):
-                if self.star_powered > 0 and isinstance(tile, BrickTile):
+                if (self.star_powered > 0 or self.muscle_powered > 0) and isinstance(tile, (BrickTile, PipeTile)):
                     to_smash_h.append(tile)
                 else:
                     if self.vx > 0:
@@ -1146,7 +1146,7 @@ class Player(pygame.sprite.Sprite):
         to_smash_v = []
         for tile in solid_tiles:
             if self.hitbox.colliderect(tile.rect):
-                if self.vy < 0 and self.star_powered > 0 and isinstance(tile, BrickTile):
+                if self.vy < 0 and (self.star_powered > 0 or self.muscle_powered > 0) and isinstance(tile, (BrickTile, PipeTile)):
                     to_smash_v.append(tile)
                 elif self.vy > 0:
                     self.hitbox.bottom = tile.rect.top
