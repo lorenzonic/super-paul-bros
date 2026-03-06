@@ -505,30 +505,129 @@ def _draw_gradient_sky(surface):
 _pizzeria_bg_cache = None
 
 def _draw_pizzeria_bg(surface):
-    """Warm restaurant interior background – brick walls, tiled floor. Cached."""
+    """Italian pizzeria interior – tiled floor, arched windows, checkered tablecloths."""
     global _pizzeria_bg_cache
     if _pizzeria_bg_cache is None:
         bg = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT))
-        # warm cream base
-        bg.fill((255, 220, 160))
-        # brick pattern on walls
-        bw, bh = 46, 22
-        for row in range(SCREEN_HEIGHT // bh + 2):
+
+        # ── wall: warm plaster / stucco ──────────────────────
+        bg.fill((245, 228, 185))
+
+        # ── rustic brick band along the top third ─────────────
+        bw, bh = 48, 20
+        for row in range(10):
             off = (row % 2) * (bw // 2)
             for col in range(-1, SCREEN_WIDTH // bw + 2):
-                c = (200, 110, 70) if (row + col) % 2 == 0 else (225, 138, 86)
-                pygame.draw.rect(bg, c, (col * bw + off, row * bh, bw - 2, bh - 2))
-        # darker tiled floor strip at the bottom
-        pygame.draw.rect(bg, (170, 110, 70),
-                         (0, SCREEN_HEIGHT - 60, SCREEN_WIDTH, 60))
-        for i in range(SCREEN_WIDTH // 40 + 2):
-            pygame.draw.line(bg, (145, 90, 55),
-                             (i * 40, SCREEN_HEIGHT - 60),
-                             (i * 40, SCREEN_HEIGHT), 1)
-        for j in range(2):
-            pygame.draw.line(bg, (145, 90, 55),
-                             (0, SCREEN_HEIGHT - 60 + j * 30),
-                             (SCREEN_WIDTH, SCREEN_HEIGHT - 60 + j * 30), 1)
+                dark = (row + col) % 3 == 0
+                c = (185, 80, 50) if dark else (210, 100, 65)
+                rx = col * bw + off
+                ry = row * bh
+                pygame.draw.rect(bg, c, (rx + 1, ry + 1, bw - 2, bh - 2), border_radius=2)
+                pygame.draw.rect(bg, (160, 60, 35), (rx + 1, ry + 1, bw - 2, bh - 2), 1, border_radius=2)
+
+        # mortar color between bricks
+        pygame.draw.rect(bg, (210, 195, 160), (0, 0, SCREEN_WIDTH, 10 * bh), 0)
+        for row in range(10):
+            off = (row % 2) * (bw // 2)
+            for col in range(-1, SCREEN_WIDTH // bw + 2):
+                dark = (row + col) % 3 == 0
+                c = (185, 80, 50) if dark else (210, 100, 65)
+                rx = col * bw + off
+                ry = row * bh
+                pygame.draw.rect(bg, c, (rx + 1, ry + 1, bw - 2, bh - 2), border_radius=2)
+
+        # ── arched windows (3 evenly spaced) ──────────────────
+        win_y     = 20
+        win_h_box = 120
+        win_w_box = 90
+        for wx in [120, 380, 640]:
+            # shutter / frame
+            pygame.draw.rect(bg, (120, 75, 30),
+                             (wx - 4, win_y - 4, win_w_box + 8, win_h_box + 4), border_radius=6)
+            # sky-blue glass
+            pygame.draw.rect(bg, (140, 205, 235),
+                             (wx, win_y, win_w_box, win_h_box - 20), border_radius=4)
+            # arch top
+            pygame.draw.ellipse(bg, (140, 205, 235),
+                                (wx, win_y + win_h_box - 60, win_w_box, 40))
+            # warm sun glow inside window
+            glow = pygame.Surface((win_w_box, win_h_box), pygame.SRCALPHA)
+            pygame.draw.ellipse(glow, (255, 240, 180, 60),
+                                (10, 10, win_w_box - 20, win_h_box - 20))
+            bg.blit(glow, (wx, win_y))
+            # window cross bar
+            mid_x = wx + win_w_box // 2
+            pygame.draw.line(bg, (120, 75, 30), (mid_x, win_y), (mid_x, win_y + win_h_box - 20), 3)
+            pygame.draw.line(bg, (120, 75, 30),
+                             (wx, win_y + (win_h_box - 20) // 2),
+                             (wx + win_w_box, win_y + (win_h_box - 20) // 2), 3)
+            # window sill
+            pygame.draw.rect(bg, (200, 170, 110),
+                             (wx - 8, win_y + win_h_box - 20, win_w_box + 16, 10),
+                             border_radius=3)
+            # potted plant on sill (tiny green)
+            pygame.draw.rect(bg, (160, 90, 40),
+                             (wx + win_w_box // 2 - 8, win_y + win_h_box - 12, 16, 12),
+                             border_radius=2)
+            pygame.draw.circle(bg, (60, 140, 50),
+                                (wx + win_w_box // 2, win_y + win_h_box - 18), 10)
+
+        # ── "PIZZERIA" sign on wall ───────────────────────────
+        font_big  = pygame.font.SysFont("Arial Black", 28, bold=True)
+        sign_surf = font_big.render("** LA PIZZERIA **", True, (200, 50, 20))
+        # sign board
+        sw, sh = sign_surf.get_size()
+        sx = SCREEN_WIDTH // 2 - sw // 2 - 12
+        sy = 155
+        pygame.draw.rect(bg, (100, 50, 15), (sx - 4, sy - 4, sw + 32, sh + 12),
+                         border_radius=6)
+        pygame.draw.rect(bg, (240, 210, 120), (sx, sy, sw + 24, sh + 4),
+                         border_radius=4)
+        bg.blit(sign_surf, (sx + 12, sy + 2))
+
+        # ── lower wall: warm plaster ──────────────────────────
+        wall_line = 10 * bh
+        pygame.draw.rect(bg, (235, 215, 170),
+                         (0, wall_line, SCREEN_WIDTH, SCREEN_HEIGHT - wall_line))
+
+        # subtle wainscoting panel strip
+        panel_y = wall_line + 5
+        pygame.draw.rect(bg, (195, 155, 90),
+                         (0, panel_y, SCREEN_WIDTH, 8))
+        pygame.draw.rect(bg, (215, 180, 115),
+                         (0, panel_y + 8, SCREEN_WIDTH, 55))
+        pygame.draw.rect(bg, (195, 155, 90),
+                         (0, panel_y + 63, SCREEN_WIDTH, 8))
+        # panel dividers every 80px
+        for px in range(0, SCREEN_WIDTH, 80):
+            pygame.draw.line(bg, (195, 155, 90),
+                             (px, panel_y + 8), (px, panel_y + 63), 2)
+
+        # ── checkered black-and-white tablecloth strip ─────────
+        tc_y  = SCREEN_HEIGHT - 110
+        tc_h  = 30
+        tc_sz = 15
+        for ci in range(SCREEN_WIDTH // tc_sz + 1):
+            c = (240, 240, 240) if ci % 2 == 0 else (40, 40, 40)
+            pygame.draw.rect(bg, c, (ci * tc_sz, tc_y, tc_sz, tc_h))
+        # red border lines
+        pygame.draw.rect(bg, (200, 30, 30), (0, tc_y,       SCREEN_WIDTH, 3))
+        pygame.draw.rect(bg, (200, 30, 30), (0, tc_y + tc_h, SCREEN_WIDTH, 3))
+
+        # ── tiled floor (classic Italian terracotta hex look) ──
+        floor_y = tc_y + tc_h + 3
+        pygame.draw.rect(bg, (185, 120, 70),
+                         (0, floor_y, SCREEN_WIDTH, SCREEN_HEIGHT - floor_y))
+        tw = 38
+        for row_f in range((SCREEN_HEIGHT - floor_y) // tw + 2):
+            off_f = (row_f % 2) * (tw // 2)
+            fy    = floor_y + row_f * tw
+            for col_f in range(-1, SCREEN_WIDTH // tw + 2):
+                fc = (195, 110, 60) if (row_f + col_f) % 2 == 0 else (175, 95, 52)
+                pygame.draw.rect(bg, fc, (col_f * tw + off_f + 1, fy + 1, tw - 2, tw - 2))
+                pygame.draw.rect(bg, (155, 80, 40),
+                                 (col_f * tw + off_f + 1, fy + 1, tw - 2, tw - 2), 1)
+
         _pizzeria_bg_cache = bg
     surface.blit(_pizzeria_bg_cache, (0, 0))
 
