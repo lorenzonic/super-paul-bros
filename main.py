@@ -20,7 +20,7 @@ import pygame
 import random
 
 from settings    import *
-from sprites     import (Player, Goomba, GroundTile, BrickTile, QuestionBlock,
+from sprites     import (Player, Goomba, Piggy, GroundTile, BrickTile, QuestionBlock,
                          PipeTile, Coin, Kostas, FlagPole, Cloud, ScorePopup,
                          OrchideeA2Popup, StarBlock, Star, BrickDebris, draw_text)
 from level_data  import (LEVEL_1, LEVEL_2, LEVEL_3, CLOUDS_L2, CLOUDS_L3,
@@ -167,7 +167,7 @@ class VirtualKeys:
 
 
 # ── Level loader ─────────────────────────────────────────────
-def load_level(tile_map, cloud_data=None):
+def load_level(tile_map, cloud_data=None, level_num=1):
     if cloud_data is None:
         cloud_data = CLOUDS
     """
@@ -237,7 +237,8 @@ def load_level(tile_map, cloud_data=None):
 
             elif ch == 'E':
                 # enemy spawns at bottom of cell (standing on ground)
-                e = Goomba(x + TILE_SIZE // 2, (row_i + 1) * TILE_SIZE)
+                EnemyCls = Piggy if level_num == 3 else Goomba
+                e = EnemyCls(x + TILE_SIZE // 2, (row_i + 1) * TILE_SIZE)
                 enemies.add(e)
                 # NOT added to all_sprites yet; done separately so they draw on top
 
@@ -529,7 +530,7 @@ class Game:
         (self.solid_tiles, self.question_blocks,
          self.enemies, self.coins_group,
          self.all_sprites, self.flag,
-         self.level_pix_w, self.clouds) = load_level(level_map, cloud_data)
+         self.level_pix_w, self.clouds) = load_level(level_map, cloud_data, self._level_num)
 
         col, row = PLAYER_START
         px = col * TILE_SIZE + TILE_SIZE // 2
@@ -963,10 +964,10 @@ class Game:
 
             if self._level_num == 3:
                 _txt("Level  3",      52, SCREEN_HEIGHT // 2 - 80, (220, 180, 255))
-                _txt("Cieli Infiniti", 40, SCREEN_HEIGHT // 2 - 20, (160,  80, 255))
+                _txt("infinity sky", 40, SCREEN_HEIGHT // 2 - 20, (160,  80, 255))
             else:
                 _txt("Level  2",      52, SCREEN_HEIGHT // 2 - 80, (220, 180, 255))
-                _txt("Notte Oscura",   40, SCREEN_HEIGHT // 2 - 20, (160,  80, 255))
+                _txt("dark night",   40, SCREEN_HEIGHT // 2 - 20, (160,  80, 255))
             _txt("", 18,
                  SCREEN_HEIGHT // 2 + 44, (160, 160, 200))
 

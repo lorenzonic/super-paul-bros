@@ -62,7 +62,48 @@ def _get_patrice_image():
     return raw
 
 
-_orchidee_cache = None
+_orchidee_cache  = None
+_piggy_frames_cache = None   # None = not attempted; False = not found; list = frames
+
+
+def _load_gif_frames(path):
+    """Load all frames from a GIF. Uses Pillow if available, else single pygame frame."""
+    try:
+        from PIL import Image as PILImage
+        pil_img = PILImage.open(path)
+        frames = []
+        try:
+            while True:
+                frame = pil_img.copy().convert("RGBA")
+                w, h  = frame.size
+                surf  = pygame.image.fromstring(frame.tobytes(), (w, h), "RGBA").convert_alpha()
+                frames.append(surf)
+                pil_img.seek(pil_img.tell() + 1)
+        except EOFError:
+            pass
+        return frames or None
+    except ImportError:
+        try:
+            return [pygame.image.load(path).convert_alpha()]
+        except Exception:
+            return None
+    except Exception:
+        return None
+
+
+def _get_piggy_frames():
+    """Load assets/piggy.gif once and return list of Surfaces (or None)."""
+    global _piggy_frames_cache
+    if _piggy_frames_cache is not None:
+        return _piggy_frames_cache if _piggy_frames_cache else None
+    path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "assets", "piggy.gif")
+    if not os.path.exists(path):
+        _piggy_frames_cache = False
+        return None
+    frames = _load_gif_frames(path)
+    _piggy_frames_cache = frames if frames else False
+    return _piggy_frames_cache if _piggy_frames_cache else None
+
 
 def _get_orchidee_image():
     """Load assets/orchideeA2.png once, strip white background, return Surface or None."""
@@ -689,6 +730,52 @@ class Goomba(pygame.sprite.Sprite):
         self.alive_flag = False
         self._death_t   = 0
         self._draw_stomped()
+
+
+# ── Piggy – Level 3 animated GIF enemy ─────────────────────
+
+class Piggy(Goomba):
+    """Level-3 enemy: cycles through piggy.gif frames; same physics as Goomba."""
+
+    FRAME_DURATION = 6   # game ticks per GIF frame
+
+    def __init__(self, x, y):
+        super().__init__(x, y)
+        self._gif_frame = 0
+        self._gif_tick  = 0
+        self._draw_alive()   # overwrite with piggy image
+
+    def _draw_alive(self):
+        frames = _get_piggy_frames()
+        if not frames:
+            super()._draw_alive()
+            return
+        w, h = self.SPRITE_W, self.SPRITE_H
+        scaled = pygame.transform.smoothscale(
+            frames[self._gif_frame % len(frames)], (w, h))
+        self.image.fill((0, 0, 0, 0))
+        self.image.blit(scaled, (0, 0))
+
+    def _draw_stomped(self):
+        frames = _get_piggy_frames()
+        if not frames:
+            super()._draw_stomped()
+            return
+        w, h = self.SPRITE_W, self.SPRITE_H
+        squished = pygame.transform.smoothscale(frames[0], (w - 4, 14))
+        self.image.fill((0, 0, 0, 0))
+        self.image.blit(squished, (2, h - 16))
+
+    def update(self, solid_tiles):
+        super().update(solid_tiles)
+        if self.alive_flag:
+            self._gif_tick += 1
+            if self._gif_tick >= self.FRAME_DURATION:
+                self._gif_tick   = 0
+                frames = _get_piggy_frames()
+                if frames:
+                    self._gif_frame = (self._gif_frame + 1) % len(frames)
+                    self._draw_alive()
 
 
 # ── Player ──────────────────────────────────────────────────
