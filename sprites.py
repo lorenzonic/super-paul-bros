@@ -740,10 +740,10 @@ class Piggy(Goomba):
     FRAME_DURATION = 6   # game ticks per GIF frame
 
     def __init__(self, x, y):
-        super().__init__(x, y)
+        # must be set BEFORE super().__init__() because it calls _draw_alive()
         self._gif_frame = 0
         self._gif_tick  = 0
-        self._draw_alive()   # overwrite with piggy image
+        super().__init__(x, y)
 
     def _draw_alive(self):
         frames = _get_piggy_frames()
