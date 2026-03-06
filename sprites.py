@@ -999,7 +999,7 @@ class Player(pygame.sprite.Sprite):
         if key in cls._img_cache:
             return cls._img_cache[key]
 
-        W, H = 80, 100
+        W, H = (120, 150) if muscle else (80, 100)
         surf = pygame.Surface((W, H), pygame.SRCALPHA)
 
         if muscle:
@@ -1094,15 +1094,16 @@ class Player(pygame.sprite.Sprite):
 
         # jump (with variable height: release early = lower jump)
         jump_pressed = (keys[pygame.K_SPACE] or keys[pygame.K_UP] or keys[pygame.K_w])
+        jump_speed = JUMP_SPEED * 1.7 if self.muscle_powered > 0 else JUMP_SPEED
         if jump_pressed:
             if self.on_ground or self._coyote > 0:
-                self.vy = JUMP_SPEED
+                self.vy = jump_speed
                 self.on_ground = False
                 self._coyote = 0
                 self._jump_held = True
         else:
             # cut jump short if released early
-            if hasattr(self, '_jump_held') and self._jump_held and self.vy < JUMP_SPEED * 0.4:
+            if hasattr(self, '_jump_held') and self._jump_held and self.vy < jump_speed * 0.4:
                 self.vy *= 0.55
             self._jump_held = False
 
