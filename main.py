@@ -728,9 +728,11 @@ class Game:
                     fy = event.y * SCREEN_HEIGHT
                     self.touch.finger_down(fx, fy, event.finger_id)
                     if self.state == STATE_MENU:
-                        if not any(r.collidepoint(fx, fy)
-                                   for r in self.touch._rects.values()):
-                            self._go_name_input()  # any tap on menu → name input
+                        if _MENU_LB_BTN.collidepoint(fx, fy):
+                            self.state = STATE_LEADERBOARD
+                        elif not any(r.collidepoint(fx, fy)
+                                     for r in self.touch._rects.values()):
+                            self._go_name_input()  # tap outside buttons → name input
                     elif self.state == STATE_NAME_INPUT:
                         # PLAY button area
                         if 240 <= fy <= 290:
@@ -745,6 +747,7 @@ class Game:
                     elif self.state == STATE_LEADERBOARD:
                         self.state = STATE_MENU
                         self._won  = False
+                        self._lb_scroll = 0
 
                 if event.type == pygame.FINGERUP:
                     self.touch.finger_up(event.finger_id)
