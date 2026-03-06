@@ -154,7 +154,7 @@ LEVEL_3 = [
     _r(""),                                                                               # row 7
     # Second set of bridge platforms (row 8) – same positions as row 3
     _BRIDGES_L3,                                                                         # row 8
-    _r(""),                                                                               # row 9
+    _r(" "*28 + "M" + " "*38 + "M" + " "*41 + "M"),                                     # row 9 – muscle pills
     # Enemies on islands (1 per island), Flag on last island (row 10)
     _r("E" + " "*13 + "E" + " "*10 + "E" + " "*12 + "E" +
        " "*12 + "E" + " "*12 + "E" + " "*12 + "E" + " "*13 + "E" +
@@ -210,7 +210,7 @@ LEVEL_4 = [
     # Oven / forno pipe-tops as pillars
     _r(" "*14 + "T" + " "*19 + "T" + " "*19 + "T" + " "*19 +
        "T" + " "*19 + "T" + " "*19 + "T" + " "*19 + "T"),     # row 8
-    _r(""),                                                    # row 9
+    _r(" "*30 + "M" + " "*39 + "M" + " "*49 + "M"),     # row 9 – muscle pills
     # 6 PizzaEnemy spawns spaced 20 tiles apart; Flag near the end
     _r(" "*5 + "E" + " "*19 + "E" + " "*19 + "E" + " "*19 +
        "E" + " "*19 + "E" + " "*19 + "E" + " "*44 + "F"),     # row 10
