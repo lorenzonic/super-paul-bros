@@ -344,30 +344,56 @@ def draw_name_input(surface, name_buf, cursor_visible, board):
 
 
 # ── Leaderboard screen ────────────────────────────────────────
-def draw_leaderboard(surface, board, score, player_name, won):
+_lb_scroll_offset = 0   # module-level scroll state
+
+def draw_leaderboard(surface, board, score, player_name, won, scroll_offset=0):
     surface.fill((0, 10, 40))
+    header_h = 0
     if not player_name:
-        # Opened from menu – no game played yet
         draw_text(surface, "LEADERBOARD", 56, SCREEN_WIDTH // 2, 28, YELLOW, center=True)
+        header_h = 90
     else:
         title_col  = YELLOW if won else RED
         title_text = "YOU WIN!" if won else "GAME OVER"
         draw_text(surface, title_text, 56, SCREEN_WIDTH // 2, 28, title_col, center=True)
         draw_text(surface, f"Your score:  {score:06d}", 24,
                   SCREEN_WIDTH // 2, 100, WHITE, center=True)
+        header_h = 125
 
-    draw_text(surface, "LEADERBOARD", 26, SCREEN_WIDTH // 2, 135, (150, 150, 220), center=True)
+    draw_text(surface, "LEADERBOARD", 26, SCREEN_WIDTH // 2, header_h + 10, (150, 150, 220), center=True)
+    sep_y = header_h + 40
     pygame.draw.line(surface, (90, 90, 170),
-                     (SCREEN_WIDTH // 2 - 230, 165),
-                     (SCREEN_WIDTH // 2 + 230, 165), 2)
-    medal_col = [(255, 215, 0), (192, 192, 192), (205, 127, 50)]
-    for i, entry in enumerate(board):
+                     (SCREEN_WIDTH // 2 - 230, sep_y),
+                     (SCREEN_WIDTH // 2 + 230, sep_y), 2)
+
+    # clip entries so they don't overflow the bottom of the screen
+    medal_col   = [(255, 215, 0), (192, 192, 192), (205, 127, 50)]
+    row_h       = 26
+    list_top    = sep_y + 12
+    visible_h   = SCREEN_HEIGHT - list_top - 70   # reserve space for footer
+    max_visible = max(1, visible_h // row_h)
+    total       = len(board)
+    start_i     = max(0, min(scroll_offset, total - max_visible))
+    end_i       = min(total, start_i + max_visible)
+
+    for idx in range(start_i, end_i):
+        entry   = board[idx]
+        i       = idx   # global rank
         is_me   = (entry["name"] == player_name and entry["score"] == score)
         row_col = (255, 255, 80) if is_me else (medal_col[i] if i < 3 else WHITE)
         mark    = "\u25b6" if is_me else " "
         line    = f"{mark}{i+1:>2}. {entry['name']:<14} {entry['score']:>6}"
-        draw_text(surface, line, 19, SCREEN_WIDTH // 2, 176 + i * 27, row_col, center=True)
+        draw_text(surface, line, 19, SCREEN_WIDTH // 2,
+                  list_top + (idx - start_i) * row_h, row_col, center=True)
 
+    # scroll hint if more entries than visible
+    if total > max_visible:
+        draw_text(surface, f"({start_i+1}-{end_i} of {total})  \u2191\u2193 to scroll",
+                  16, SCREEN_WIDTH // 2, SCREEN_HEIGHT - 78, (100, 100, 160), center=True)
+    # scroll hint if many entries
+    if len(board) > 10:
+        draw_text(surface, "(scroll: ↑↓)",
+                  16, SCREEN_WIDTH // 2, SCREEN_HEIGHT - 78, (100, 100, 160), center=True)
     draw_text(surface, "Press ENTER or tap to continue",
               21, SCREEN_WIDTH // 2, SCREEN_HEIGHT - 55, GRAY, center=True)
 
@@ -393,7 +419,7 @@ def draw_menu(surface, board):
 
     draw_text(surface, "SUPER PAUL BROS",
               78, SCREEN_WIDTH // 2, 60, YELLOW, center=True)
-    draw_text(surface, "World  1 - 2",
+    draw_text(surface, "World  1 - 3",
               30, SCREEN_WIDTH // 2, 140, WHITE,  center=True)
 
     # ── big START button ──
@@ -419,6 +445,8 @@ def draw_menu(surface, board):
               18, SCREEN_WIDTH // 2, 320, GRAY,   center=True)
     draw_text(surface, "Stomp enemies \u00b7 collect coins \u00b7 reach the flag!",
               16, SCREEN_WIDTH // 2, 345, GRAY,   center=True)
+    draw_text(surface, "CTRL+P  →  skip to level 3",
+              14, SCREEN_WIDTH // 2, 368, (120, 80, 200), center=True)
 
     if board:
         draw_text(surface, "Top 3:", 18, SCREEN_WIDTH // 2, 375, YELLOW, center=True)
@@ -514,6 +542,7 @@ class Game:
 
         self._level_data = None
         self._level_num  = 1
+        self._lb_scroll  = 0   # leaderboard scroll offset
 
     # ── level init ───────────────────────────────────────────
 
@@ -643,7 +672,8 @@ class Game:
 
             elif self.state == STATE_LEADERBOARD:
                 draw_leaderboard(self._canvas, self._leaderboard,
-                                 self._score, self._player_name, self._won)
+                                 self._score, self._player_name, self._won,
+                                 self._lb_scroll)
 
             # scale canvas to actual window and flip
             pygame.transform.smoothscale(self._canvas, self._win_size, self.screen)
@@ -672,14 +702,14 @@ class Game:
             pygame.key.start_text_input()
         self.state = STATE_NAME_INPUT
 
-    def _start_game(self):
+    def _start_game(self, start_level=1):
         pygame.key.stop_text_input()
         self._player_name = self._name_buf.strip() or "Player"
         self._score     = 0
         self._lives     = STARTING_LIVES
         self._coins     = 0
         self._won       = False
-        self._level_num = 1
+        self._level_num = start_level
         self._load_level()
         self.touch.reset()
         self.state = STATE_PLAYING
@@ -748,6 +778,10 @@ class Game:
                         self._go_name_input()
                     elif event.key == pygame.K_l:
                         self.state = STATE_LEADERBOARD
+                    elif event.key == pygame.K_p and pygame.key.get_mods() & pygame.KMOD_CTRL:
+                        # Cheat: Ctrl+P → skip to level 3
+                        self._name_buf = "Cheater"
+                        self._start_game(start_level=3)
 
                 elif self.state == STATE_NAME_INPUT:
                     if event.key == pygame.K_RETURN:
@@ -759,8 +793,13 @@ class Game:
                     if event.key in (pygame.K_RETURN, pygame.K_SPACE):
                         self.state = STATE_MENU
                         self._won  = False
+                        self._lb_scroll = 0
                         # Refresh leaderboard in background for next visit
                         self._lb_fetch_task = asyncio.create_task(fetch_scores())
+                    elif event.key in (pygame.K_DOWN, pygame.K_s):
+                        self._lb_scroll += 1
+                    elif event.key in (pygame.K_UP, pygame.K_w):
+                        self._lb_scroll = max(0, self._lb_scroll - 1)
 
             # ── mouse click (desktop START / PLAY buttons) ───────────
             if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
@@ -781,6 +820,7 @@ class Game:
                 elif self.state == STATE_LEADERBOARD:
                     self.state = STATE_MENU
                     self._won  = False
+                    self._lb_scroll = 0
                     self._lb_fetch_task = asyncio.create_task(fetch_scores())
 
     # ── update ───────────────────────────────────────────────
