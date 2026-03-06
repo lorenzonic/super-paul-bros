@@ -851,6 +851,8 @@ class PizzaSlice(pygame.sprite.Sprite):
 class PizzaEnemy(Goomba):
     """Level-4 enemy: displayed as pizza.png, throws spinning pizza slices."""
 
+    SPRITE_W       = 100   # bigger than the default 72
+    SPRITE_H       = 100
     SHOOT_INTERVAL = 110   # frames between shots (~1.8 s at 60 fps)
 
     def __init__(self, x, y):
