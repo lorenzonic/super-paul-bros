@@ -933,15 +933,22 @@ class Game:
                                 self.player.trigger_death()
 
         # -- player death (fell in pit or no lives) --
-        if self.player.dead:
-            if self.player.hitbox.top > SCREEN_HEIGHT + 100:
-                # If fell off the right end of the level → win instead
-                if self.player.hitbox.centerx >= self.level_pix_w - TILE_SIZE * 5:
-                    self._trigger_win()
-                else:
-                    self._dead_timer = 90
-                    self.state = STATE_DEAD
+        if self.player.hitbox.top > SCREEN_HEIGHT + 100:
+            # fell off the right edge of the level → win
+            if self.player.hitbox.centerx >= self.level_pix_w - TILE_SIZE * 5:
+                self._trigger_win()
+                return
+            # fell in a pit: deduct a life if the player is still alive
+            if not self.player.dead:
+                self._lives -= 1
+                if self._lives <= 0:
+                    self.player.trigger_death()
+            self._dead_timer = 90
+            self.state = STATE_DEAD
             return
+
+        if self.player.dead:
+            return  # wait for death animation to finish falling
 
         # -- right edge of level → win (walked/jumped past flag) --
         if self.player.hitbox.right >= self.level_pix_w:
