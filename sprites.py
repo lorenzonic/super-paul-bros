@@ -15,6 +15,7 @@ from settings import *
 
 _face_cache    = None   # None = not attempted; False = not found; Surface = loaded
 _patrice_cache = None   # same pattern for patrice.png (enemy image)
+_muscle_cache  = None   # same pattern for muscle.png
 
 
 def _strip_white_bg(surface):
@@ -59,6 +60,22 @@ def _get_patrice_image():
     raw = pygame.image.load(path).convert_alpha()
     _strip_white_bg(raw)
     _patrice_cache = raw
+    return raw
+
+
+def _get_muscle_image():
+    """Load assets/muscle.png once, strip white background, return Surface or None."""
+    global _muscle_cache
+    if _muscle_cache is not None:
+        return _muscle_cache if _muscle_cache else None
+    path = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                        "assets", "muscle.png")
+    if not os.path.exists(path):
+        _muscle_cache = False
+        return None
+    raw = pygame.image.load(path).convert_alpha()
+    _strip_white_bg(raw)
+    _muscle_cache = raw
     return raw
 
 
@@ -985,26 +1002,32 @@ class Player(pygame.sprite.Sprite):
         W, H = 80, 100
         surf = pygame.Surface((W, H), pygame.SRCALPHA)
 
-        face_img = _get_face_image()
-        if face_img:
-            scaled = pygame.transform.smoothscale(face_img, (W, H))
-        else:
-            # minimal fallback if image missing
-            scaled = pygame.Surface((W, H), pygame.SRCALPHA)
-            pygame.draw.ellipse(scaled, CREAM, (10, 5, 60, 75))
-            pygame.draw.circle(scaled, BLACK, (35, 35), 5)
-
-        # star-power: golden tint overlay
-        if star:
-            tint = pygame.Surface((W, H), pygame.SRCALPHA)
-            tint.fill((255, 220, 0, 80))
-            scaled.blit(tint, (0, 0), special_flags=pygame.BLEND_RGBA_ADD)
-
-        # muscle-power: red tint overlay
         if muscle:
-            tint = pygame.Surface((W, H), pygame.SRCALPHA)
-            tint.fill((220, 40, 40, 90))
-            scaled.blit(tint, (0, 0), special_flags=pygame.BLEND_RGBA_ADD)
+            # use muscle.png instead of the normal face
+            muscle_img = _get_muscle_image()
+            if muscle_img:
+                scaled = pygame.transform.smoothscale(muscle_img, (W, H))
+            else:
+                # fallback: normal face with red tint
+                face_img = _get_face_image()
+                scaled = pygame.transform.smoothscale(face_img, (W, H)) if face_img else pygame.Surface((W, H), pygame.SRCALPHA)
+                tint = pygame.Surface((W, H), pygame.SRCALPHA)
+                tint.fill((220, 40, 40, 90))
+                scaled.blit(tint, (0, 0), special_flags=pygame.BLEND_RGBA_ADD)
+        else:
+            face_img = _get_face_image()
+            if face_img:
+                scaled = pygame.transform.smoothscale(face_img, (W, H))
+            else:
+                scaled = pygame.Surface((W, H), pygame.SRCALPHA)
+                pygame.draw.ellipse(scaled, CREAM, (10, 5, 60, 75))
+                pygame.draw.circle(scaled, BLACK, (35, 35), 5)
+
+            # star-power: golden tint overlay
+            if star:
+                tint = pygame.Surface((W, H), pygame.SRCALPHA)
+                tint.fill((255, 220, 0, 80))
+                scaled.blit(tint, (0, 0), special_flags=pygame.BLEND_RGBA_ADD)
 
         surf.blit(scaled, (0, 0))
 
