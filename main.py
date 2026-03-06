@@ -23,7 +23,8 @@ from settings    import *
 from sprites     import (Player, Goomba, GroundTile, BrickTile, QuestionBlock,
                          PipeTile, Coin, Kostas, FlagPole, Cloud, ScorePopup,
                          OrchideeA2Popup, StarBlock, Star, BrickDebris, draw_text)
-from level_data  import LEVEL_1, LEVEL_2, CLOUDS_L2, PLAYER_START, CLOUDS
+from level_data  import (LEVEL_1, LEVEL_2, LEVEL_3, CLOUDS_L2, CLOUDS_L3,
+                         PLAYER_START, CLOUDS)
 from leaderboard import fetch_scores, post_score
 
 # ── Web (Pygbag) detection ───────────────────────────────
@@ -519,6 +520,9 @@ class Game:
         if self._level_num == 2:
             level_map   = LEVEL_2
             cloud_data  = CLOUDS_L2
+        elif self._level_num == 3:
+            level_map   = LEVEL_3
+            cloud_data  = CLOUDS_L3
         else:
             level_map   = LEVEL_1
             cloud_data  = CLOUDS
@@ -913,8 +917,12 @@ class Game:
         cv = self._canvas
 
         if t < 60:
-            # Phase 1 (0–60): day-sky fades to black
-            _draw_gradient_sky(cv)
+            # Phase 1 (0–60): previous level fades to black
+            if self._level_num == 3:
+                _draw_dark_sky(cv)
+            else:
+                _draw_gradient_sky(cv)
+
             alpha = int(t / 60 * 255)
             veil  = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT))
             veil.fill((0, 0, 0))
@@ -948,14 +956,21 @@ class Game:
                 img.set_alpha(text_a)
                 cv.blit(img, img.get_rect(center=(SCREEN_WIDTH // 2, y)))
 
-            _txt("Level  2",      52, SCREEN_HEIGHT // 2 - 80, (220, 180, 255))
-            _txt("Dark Night",   40, SCREEN_HEIGHT // 2 - 20, (160,  80, 255))
+            if self._level_num == 3:
+                _txt("Level  3",      52, SCREEN_HEIGHT // 2 - 80, (220, 180, 255))
+                _txt("Cieli Infiniti", 40, SCREEN_HEIGHT // 2 - 20, (160,  80, 255))
+            else:
+                _txt("Level  2",      52, SCREEN_HEIGHT // 2 - 80, (220, 180, 255))
+                _txt("Notte Oscura",   40, SCREEN_HEIGHT // 2 - 20, (160,  80, 255))
             _txt("", 18,
                  SCREEN_HEIGHT // 2 + 44, (160, 160, 200))
 
         else:
-            # Phase 3 (120–200): dark sky fades in from black
-            _draw_dark_sky(cv)
+            # Phase 3 (120–200): new level's sky fades in
+            if self._level_num == 2:
+                _draw_dark_sky(cv)
+            else:
+                _draw_gradient_sky(cv)
             fade  = max(0, 200 - t)           # 80 → 0
             alpha = int(fade / 80 * 255)
             if alpha > 0:
