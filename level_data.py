@@ -110,52 +110,58 @@ CLOUDS_L2 = [
 ]
 
 # ── Level 3 – Cieli Infiniti ──────────────────────────────────
-# Sky theme: floating islands, minimal ground, verticality.
+# Sky theme: floating islands with 3-tile gaps (manageable jumps).
+# Bridge platforms sit above every gap to help the player.
+#
+# Island layout (col ranges):
+#   0:  0- 9  |  1: 13-20  |  2: 24-33  |  3: 37-46  |  4: 50-59
+#   5: 63-72  |  6: 76-85  |  7: 89-100 |  8:104-115  |  9:119-131 | 10:135-159
+# Gaps (3 tiles wide): 10-12, 21-23, 34-36, 47-49, 60-62,
+#                      73-75, 86-88, 101-103, 116-118, 132-134
+
+_GROUND_L3 = (
+    "G"*10 + " "*3 + "G"*8  + " "*3 + "G"*10 + " "*3 + "G"*10 + " "*3 +
+    "G"*10 + " "*3 + "G"*10 + " "*3 + "G"*10 + " "*3 + "G"*12 + " "*3 +
+    "G"*12 + " "*3 + "G"*13 + " "*3 + "G"*25
+)   # 160 chars
+
+# Bridge platforms centered above each gap (cols 11,22,35,48,61,74,87,102,117,133)
+_BRIDGES_L3 = _r(
+    " "*11 + "_" + " "*10 + "_" + " "*12 + "_" + " "*12 + "_" + " "*12 +
+    "_" + " "*12 + "_" + " "*12 + "_" + " "*14 + "_" + " "*14 + "_" +
+    " "*15 + "_"
+)
 
 LEVEL_3 = [
-    _r(""),                                                                                  
-    _r(""),
-    _r("                   KKK                         KKK                         KKK       "),
-    _r("         ___                   ___                         ___                         ___"),
-    _r("                  ?       ?               ?       ?                   ?       ?                   ?       ?"),
-    _r(""),
-    _r("      ?   B?B     ?   B?B     ?   B?B     ?   B?B     ?   B?B     ?   B?B     ?   B?B     ?   B?B"),
-    _r(""),
-    _r("    "),
-    _r("      E         E         E         E         E         E         E         E         E         E"),
-    _r("   BBB       BBB       BBB       BBB       BBB       BBB       BBB       BBB       BBB       BBB"),
-    # Row 11: The "Floor" (broken into islands)
-    (  "GGGGGG"      # Start
-     + "      "      # 6
-     + "GGGG  "      # 6
-     + "      "      # 6
-     + "  GG  "      # 6
-     + "      "      # 6
-     + " GGGG "      # 6
-     + "      "      # 6
-     + "GGGGGG"      # 6
-     + "          "  # 10
-     + "  GG  "      # 6
-     + "      "      # 6
-     + " GGGG "      # 6
-     + "      "      # 6
-     + "GGGGGG"      # 6
-     + "      "      # 6
-     + "  GG  "      # 6
-     + "      "      # 6
-     + " GGGG "      # 6
-     + "      "      # 6
-     + "GGGGGG"      # 6
-     + "      "      # 6
-     + "  GG  "      # 6
-     + "      "      # 6
-     + " GGGG "      # 6
-     + "      "      # 6
-     + "GGGGGGGGGGG   F " # End (16 chars)
-    ),
-    _r(""),
-    _r(""),
-    _r(""),
+    _r(""),                                                                               # row 0
+    _r(""),                                                                               # row 1
+    # K coins on every island (row 2)
+    _r(" "*3  + "KK" + " "*10 + "KK" + " "*11 + "KK" + " "*10 + "KK" +
+       " "*11 + "KK" + " "*11 + "KK" + " "*11 + "KK" + " "*13 + "KK" +
+       " "*13 + "KK" + " "*13 + "KK" + " "*20 + "KK"),
+    # Bridge platforms at gap level (row 3) – first set of helpers
+    _BRIDGES_L3,                                                                         # row 3
+    # Question / ? blocks on islands (row 4)
+    _r(" "*4  + "?" + " "*10 + "B?B" + " "*10 + "?" + " "*11 + "B?B" +
+       " "*11 + "?" + " "*11 + "B?B" + " "*11 + "?" + " "*12 + "B?B" +
+       " "*12 + "?" + " "*14 + "B?B" + " "*19 + "?"),
+    _r(""),                                                                               # row 5
+    # Brick combos on islands (row 6)
+    _r(" "*3  + "B?B" + " "*9  + "B?B" + " "*9  + "B?B" + " "*9  + "B?B" +
+       " "*9  + "B?B" + " "*9  + "B?B" + " "*9  + "B?B" + " "*11 + "B?B" +
+       " "*11 + "B?B" + " "*13 + "B?B" + " "*18 + "B?B"),
+    _r(""),                                                                               # row 7
+    # Second set of bridge platforms (row 8) – same positions as row 3
+    _BRIDGES_L3,                                                                         # row 8
+    _r(""),                                                                               # row 9
+    # Enemies on islands (1 per island), Flag on last island (row 10)
+    _r(" "*3  + "E" + " "*13 + "E" + " "*10 + "E" + " "*12 + "E" +
+       " "*12 + "E" + " "*12 + "E" + " "*12 + "E" + " "*13 + "E" +
+       " "*13 + "E" + " "*46 + "F"),
+    _GROUND_L3,   # row 11
+    _GROUND_L3,   # row 12
+    _GROUND_L3,   # row 13
+    _GROUND_L3,   # row 14
 ]
 
 # Many clouds for the sky level
