@@ -26,7 +26,7 @@ from sprites     import (Player, Goomba, Piggy, PizzaEnemy, PizzaSlice,
                          OrchideeA2Popup, StarBlock, Star, BrickDebris, draw_text)
 from level_data  import (LEVEL_1, LEVEL_2, LEVEL_3, LEVEL_4,
                          CLOUDS_L2, CLOUDS_L3, CLOUDS_L4,
-                         PLAYER_START, CLOUDS)
+                         PLAYER_START, PLAYER_START_L2, PLAYER_START_L4, CLOUDS)
 from leaderboard import fetch_scores, post_score
 
 # ── Web (Pygbag) detection ───────────────────────────────
@@ -693,24 +693,29 @@ class Game:
         if self._level_num == 2:
             level_map   = LEVEL_2
             cloud_data  = CLOUDS_L2
+            player_start = PLAYER_START_L2
         elif self._level_num == 3:
             level_map   = LEVEL_3
             cloud_data  = CLOUDS_L3
+            player_start = PLAYER_START
         elif self._level_num == 4:
             level_map   = LEVEL_4
             cloud_data  = CLOUDS_L4
+            player_start = PLAYER_START_L4
         else:
             level_map   = LEVEL_1
             cloud_data  = CLOUDS
+            player_start = PLAYER_START
         (self.solid_tiles, self.question_blocks,
          self.enemies, self.coins_group,
          self.all_sprites, self.flag,
          self.level_pix_w, self.clouds) = load_level(level_map, cloud_data, self._level_num)
 
-        col, row = PLAYER_START
+        col, row = player_start
         px = col * TILE_SIZE + TILE_SIZE // 2
         py = (row + 1) * TILE_SIZE
         self.player   = Player(px, py)
+        self.player.dead = False  # Reset dead flag when loading level
         self.camera   = Camera(self.level_pix_w)
 
         # score_ref is a mutable list so sprites can increment it

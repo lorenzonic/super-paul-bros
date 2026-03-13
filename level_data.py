@@ -46,7 +46,9 @@ LEVEL_1 = [
 ]
 
 # Spawn position for Paul (column, row)
-PLAYER_START = (2, 10)
+PLAYER_START = (2, 10)      # Default (Level 1, 3)
+PLAYER_START_L2 = (0, 10)   # Level 2 – start far left away from enemies
+PLAYER_START_L4 = (0, 10)   # Level 4 – start far left away from enemies
 
 # Background clouds  (x, y, scale)
 CLOUDS = [
