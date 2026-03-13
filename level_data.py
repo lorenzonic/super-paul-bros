@@ -49,6 +49,7 @@ LEVEL_1 = [
 PLAYER_START = (2, 10)      # Default (Level 1, 3)
 PLAYER_START_L2 = (0, 10)   # Level 2 – start far left away from enemies
 PLAYER_START_L4 = (0, 10)   # Level 4 – start far left away from enemies
+PLAYER_START_L5 = (0, 10)   # Level 5 – start far left away from enemies
 
 # Background clouds  (x, y, scale)
 CLOUDS = [
@@ -229,4 +230,37 @@ CLOUDS_L4 = [
     (2300, 42, 0.5), (2700, 35, 0.4), (3200, 50, 0.5),
     (3700, 30, 0.4), (4200, 45, 0.5), (4700, 32, 0.4),
     (5200, 48, 0.5), (5700, 28, 0.4), (6200, 42, 0.5),
+]
+
+# ── Level 5 – Office (Bier Enemy) ────────────────────────────────────
+# Corporate vibe: desks, office décor, Bier enemies throwing bottles.
+
+_GROUND_L5 = "G" * 160
+
+LEVEL_5 = [
+    _r(""),                                                                               # row 0
+    _r(""),                                                                               # row 1
+    _r(""),                                                                               # row 2
+    _r("         BBBBB                        BBBBB                         BBBBB       "),  # row 3 – office desks
+    _r(""),                                                                               # row 4
+    _r("    ?       B?B       ?        B?B        ?         B?B        ?       B?B     "),  # row 5
+    _r("   BBB                BBB                BBB                BBB               B"),   # row 6
+    _r(""),                                                                               # row 7
+    _r("  T    T      T     T      T      T     T       T      T       T      T       T"),   # row 8 – pillars
+    _r(" " * 10 + "M" + " " * 30 + "M" + " " * 30 + "M" + " " * 39),                    # row 9 – muscle pills
+    # Bier enemies (office workers) scattered across, Flag near end
+    _r("   E             E                E                 E              E" + " " * 40 + "F"),  # row 10 – 5 enemies
+    _GROUND_L5,   # row 11
+    _GROUND_L5,   # row 12
+    _GROUND_L5,   # row 13
+    _GROUND_L5,   # row 14
+]
+
+# Office-themed clouds (fluorescent, subtle)
+CLOUDS_L5 = [
+    (200,  50, 0.4), (600,  40, 0.5), (1000, 60, 0.4),
+    (1400, 45, 0.5), (1800, 55, 0.4), (2200, 40, 0.5),
+    (2600, 50, 0.4), (3000, 45, 0.5), (3400, 55, 0.4),
+    (3800, 40, 0.5), (4200, 50, 0.4), (4600, 45, 0.5),
+    (5000, 55, 0.4), (5400, 40, 0.5), (5800, 50, 0.4),
 ]

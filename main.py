@@ -23,10 +23,11 @@ from settings    import *
 from sprites     import (Player, Goomba, Piggy, PizzaEnemy, PizzaSlice,
                          MusclePill, GroundTile, BrickTile, QuestionBlock,
                          PipeTile, Coin, Kostas, FlagPole, Cloud, ScorePopup,
-                         OrchideeA2Popup, StarBlock, Star, BrickDebris, draw_text)
-from level_data  import (LEVEL_1, LEVEL_2, LEVEL_3, LEVEL_4,
-                         CLOUDS_L2, CLOUDS_L3, CLOUDS_L4,
-                         PLAYER_START, PLAYER_START_L2, PLAYER_START_L4, CLOUDS)
+                         OrchideeA2Popup, StarBlock, Star, BrickDebris, draw_text,
+                         Bier, BeerBottle)
+from level_data  import (LEVEL_1, LEVEL_2, LEVEL_3, LEVEL_4, LEVEL_5,
+                         CLOUDS_L2, CLOUDS_L3, CLOUDS_L4, CLOUDS_L5,
+                         PLAYER_START, PLAYER_START_L2, PLAYER_START_L4, PLAYER_START_L5, CLOUDS)
 from leaderboard import fetch_scores, post_score
 
 # ── Web (Pygbag) detection ───────────────────────────────
@@ -244,7 +245,9 @@ def load_level(tile_map, cloud_data=None, level_num=1):
 
             elif ch == 'E':
                 # enemy spawns at bottom of cell (standing on ground)
-                if level_num == 4:
+                if level_num == 5:
+                    EnemyCls = Bier
+                elif level_num == 4:
                     EnemyCls = PizzaEnemy
                 elif level_num == 3:
                     EnemyCls = Piggy
@@ -638,6 +641,78 @@ def _draw_pizzeria_bg(surface):
     surface.blit(_pizzeria_bg_cache, (0, 0))
 
 
+# ── Office background (Level 5) ─────────────────────────────────
+_office_bg_cache = None
+
+def _draw_office_bg(surface):
+    """Corporate office interior – desks, computers, cubicles, ceiling tiles."""
+    global _office_bg_cache
+    if _office_bg_cache is None:
+        bg = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT))
+
+        # ── background: light office walls ──────────────────
+        bg.fill((200, 200, 200))
+
+        # ── drop ceiling tiles (2x2 grid across top) ────────
+        tile_size = 80
+        for ty in range(0, SCREEN_HEIGHT, tile_size):
+            for tx in range(0, SCREEN_WIDTH, tile_size):
+                c = (180, 180, 180) if (ty // tile_size + tx // tile_size) % 2 == 0 else (210, 210, 210)
+                pygame.draw.rect(bg, c, (tx, ty, tile_size, tile_size))
+                pygame.draw.rect(bg, (150, 150, 150), (tx, ty, tile_size, tile_size), 1)
+
+        # ── hanging fluorescent lights (dim patches) ────────
+        for lx in range(40, SCREEN_WIDTH, 150):
+            light = pygame.Surface((40, 20), pygame.SRCALPHA)
+            light.fill((255, 255, 200, 40))
+            bg.blit(light, (lx, 15))
+
+        # ── office desks (scattered) ──────────────────────────
+        desk_y = SCREEN_HEIGHT // 2 + 20
+        for dx in [50, 200, 350, 500, 650]:
+            # desk surface (brown/tan)
+            pygame.draw.rect(bg, (139, 90, 43), (dx, desk_y, 120, 8))
+            pygame.draw.rect(bg, (160, 110, 60), (dx, desk_y, 120, 8), 2)
+            # desk legs (thin)
+            pygame.draw.rect(bg, (100, 60, 20), (dx + 5, desk_y + 8, 4, 30))
+            pygame.draw.rect(bg, (100, 60, 20), (dx + 110, desk_y + 8, 4, 30))
+            # computer monitor (blue screen)
+            pygame.draw.rect(bg, (20, 40, 80), (dx + 10, desk_y - 50, 50, 40), border_radius=2)
+            pygame.draw.rect(bg, (0, 200, 255), (dx + 15, desk_y - 45, 40, 32))
+            # keyboard
+            pygame.draw.rect(bg, (80, 80, 80), (dx + 12, desk_y - 5, 46, 5))
+
+        # ── cubicular dividers (low walls) ──────────────────
+        div_y = desk_y + 30
+        for dvx in [30, 180, 330, 480, 630]:
+            pygame.draw.rect(bg, (150, 120, 90), (dvx, div_y, 100, 20))
+            pygame.draw.rect(bg, (120, 90, 60), (dvx, div_y, 100, 20), 2)
+
+        # ── carpeted floor (industrial pattern) ─────────────
+        floor_y = SCREEN_HEIGHT - 100
+        pygame.draw.rect(bg, (130, 130, 130), (0, floor_y, SCREEN_WIDTH, SCREEN_HEIGHT - floor_y))
+        # subtle floor grid
+        for gy in range(floor_y, SCREEN_HEIGHT, 30):
+            pygame.draw.line(bg, (110, 110, 110), (0, gy), (SCREEN_WIDTH, gy), 1)
+        for gx in range(0, SCREEN_WIDTH, 40):
+            pygame.draw.line(bg, (110, 110, 110), (gx, floor_y), (gx, SCREEN_HEIGHT), 1)
+
+        # ── "BIERKONIG CORP" sign ────────────────────────────
+        font_title = pygame.font.SysFont("Arial Black", 32, bold=True)
+        title_surf = font_title.render("BIERKONIG CORP", True, (100, 50, 20))
+        ts_w, ts_h = title_surf.get_size()
+        sign_x = SCREEN_WIDTH // 2 - ts_w // 2
+        sign_y = 50
+        pygame.draw.rect(bg, (200, 180, 140), (sign_x - 10, sign_y - 5, ts_w + 20, ts_h + 10),
+                         border_radius=6)
+        pygame.draw.rect(bg, (100, 50, 20), (sign_x - 10, sign_y - 5, ts_w + 20, ts_h + 10), 2,
+                         border_radius=6)
+        bg.blit(title_surf, (sign_x, sign_y))
+
+        _office_bg_cache = bg
+    surface.blit(_office_bg_cache, (0, 0))
+
+
 # ── Main Game class ───────────────────────────────────────────
 class Game:
     def __init__(self):
@@ -702,6 +777,10 @@ class Game:
             level_map   = LEVEL_4
             cloud_data  = CLOUDS_L4
             player_start = PLAYER_START_L4
+        elif self._level_num == 5:
+            level_map   = LEVEL_5
+            cloud_data  = CLOUDS_L5
+            player_start = PLAYER_START_L5
         else:
             level_map   = LEVEL_1
             cloud_data  = CLOUDS
@@ -710,6 +789,15 @@ class Game:
          self.enemies, self.coins_group,
          self.all_sprites, self.flag,
          self.level_pix_w, self.clouds) = load_level(level_map, cloud_data, self._level_num)
+
+        # Set bottles_group for Bier enemies in level 5
+        if self._level_num == 5:
+            self.bottles = pygame.sprite.Group()
+            for enemy in self.enemies:
+                if isinstance(enemy, Bier):
+                    enemy.bottles_group = self.bottles
+        else:
+            self.bottles = pygame.sprite.Group()
 
         col, row = player_start
         px = col * TILE_SIZE + TILE_SIZE // 2
@@ -743,6 +831,11 @@ class Game:
         elif self._level_num == 3:
             # Show transition cinematic, then load level 4
             self._level_num   = 4
+            self._trans_timer = 0
+            self.state        = STATE_TRANSITION
+        elif self._level_num == 4:
+            # Show transition cinematic, then load level 5
+            self._level_num   = 5
             self._trans_timer = 0
             self.state        = STATE_TRANSITION
         else:
@@ -943,6 +1036,9 @@ class Game:
                     elif event.key == pygame.K_s and pygame.key.get_mods() & pygame.KMOD_CTRL:
                         self._name_buf = "Cheater"
                         self._start_game(start_level=4)
+                    elif event.key == pygame.K_m and pygame.key.get_mods() & pygame.KMOD_CTRL:
+                        self._name_buf = "Cheater"
+                        self._start_game(start_level=5)
 
                 elif self.state == STATE_NAME_INPUT:
                     if event.key == pygame.K_RETURN:
@@ -1033,7 +1129,22 @@ class Game:
         # -- enemies --
         solid_list = list(self.solid_tiles) + list(self.question_blocks)
         for enemy in list(self.enemies):
-            enemy.update(solid_list)
+            # Pass player hitbox to Bier for bottle throwing
+            if isinstance(enemy, Bier):
+                enemy.update(solid_list, self.player.hitbox)
+            else:
+                enemy.update(solid_list)
+
+        # -- beer bottles (level-5 projectiles) --
+        for bottle in list(self.bottles):
+            bottle.update(solid_list)
+            if not self.player.dead and self.player.invincible == 0:
+                if self.player.hitbox.colliderect(bottle.rect):
+                    bottle.kill()
+                    if self.player.hurt():
+                        self._lives -= 1
+                        if self._lives <= 0:
+                            self.player.trigger_death()
 
         # -- pizza slices (level-4 projectiles) --
         for enemy in list(self.enemies):
@@ -1200,6 +1311,9 @@ class Game:
             if self._level_num == 4:
                 _txt("Level  4",      52, SCREEN_HEIGHT // 2 - 80, (255, 200,  50))
                 _txt("la pizzeria",   40, SCREEN_HEIGHT // 2 - 20, (230,  70,  20))
+            elif self._level_num == 5:
+                _txt("Level  5",      52, SCREEN_HEIGHT // 2 - 80, (200, 100,  50))
+                _txt("bierkonig corp", 40, SCREEN_HEIGHT // 2 - 20, (150,  75,  25))
             elif self._level_num == 3:
                 _txt("Level  3",      52, SCREEN_HEIGHT // 2 - 80, (220, 180, 255))
                 _txt("infinity sky", 40, SCREEN_HEIGHT // 2 - 20, (160,  80, 255))
@@ -1215,6 +1329,8 @@ class Game:
                 _draw_dark_sky(cv)
             elif self._level_num == 4:
                 _draw_pizzeria_bg(cv)
+            elif self._level_num == 5:
+                _draw_office_bg(cv)
             else:
                 _draw_gradient_sky(cv)
             fade  = max(0, 200 - t)           # 80 → 0
@@ -1233,6 +1349,8 @@ class Game:
             _draw_dark_sky(cv)
         elif self._level_num == 4:
             _draw_pizzeria_bg(cv)
+        elif self._level_num == 5:
+            _draw_office_bg(cv)
         else:
             _draw_gradient_sky(cv)
 
@@ -1253,6 +1371,12 @@ class Game:
                     draw_rect = self.camera.apply(slc.rect)
                     if -100 < draw_rect.x < SCREEN_WIDTH + 100:
                         cv.blit(slc.image, draw_rect)
+
+        # beer bottles (level 5 projectiles – drawn above tiles, below player)
+        for bottle in self.bottles:
+            draw_rect = self.camera.apply(bottle.rect)
+            if -100 < draw_rect.x < SCREEN_WIDTH + 100:
+                cv.blit(bottle.image, draw_rect)
 
         # player (draw with flicker if invincible)
         if not self.player.dead:

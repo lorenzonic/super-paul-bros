@@ -158,6 +158,24 @@ def _get_pizza_image():
     return raw
 
 
+_bier_cache = None
+
+def _get_bier_image():
+    """Load assets/bier.png once, strip white background, return Surface or None."""
+    global _bier_cache
+    if _bier_cache is not None:
+        return _bier_cache if _bier_cache else None
+    path = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                        "assets", "bier.png")
+    if not os.path.exists(path):
+        _bier_cache = False
+        return None
+    raw = pygame.image.load(path).convert_alpha()
+    _strip_white_bg(raw)
+    _bier_cache = raw
+    return raw
+
+
 # ── Utility helpers ─────────────────────────────────────────
 
 def draw_text(surface, text, size, x, y, color=WHITE, center=False):
@@ -1280,3 +1298,135 @@ class Player(pygame.sprite.Sprite):
     def trigger_death(self):
         self.dead = True
         self.vy   = self._death_vy
+
+
+# ── Bier – Level 5 office enemy ─────────────────────────────
+
+class Bier(Goomba):
+    """Level-5 office enemy: throws beer bottles at the player."""
+
+    SPRITE_W = 100
+    SPRITE_H = 100
+    WALK_SPEED = 1.2
+    THROW_COOLDOWN = 120  # frames between bottle throws (2 seconds at 60 fps)
+    THROW_DISTANCE = 350  # distance to player before throwing
+
+    def __init__(self, x, y):
+        super().__init__(x, y)
+        self._throw_timer = 0
+        self.bottles_group = None  # will be set by load_level
+
+    def _draw_alive(self):
+        """Draw Bier using bier.png if available, otherwise fallback."""
+        self.image.fill((0, 0, 0, 0))
+        w, h = self.SPRITE_W, self.SPRITE_H
+        bier_img = _get_bier_image()
+        if bier_img:
+            bounds = bier_img.get_bounding_rect()
+            cropped = bier_img.subsurface(bounds)
+            scaled = pygame.transform.smoothscale(cropped, (w, h))
+            self.image.blit(scaled, (0, 0))
+        else:
+            # fallback procedural drawing (suit + angry face)
+            pygame.draw.rect(self.image, (40, 40, 40), (3, h // 3, w - 6, h * 2 // 3))  # suit body
+            pygame.draw.ellipse(self.image, (240, 200, 160), (5, 2, w - 10, h // 2 + 4))  # head
+            # angry eyes
+            pygame.draw.line(self.image, BLACK, (8, 10), (16, 14), 2)
+            pygame.draw.line(self.image, BLACK, (w - 9, 10), (w - 17, 14), 2)
+            pygame.draw.circle(self.image, WHITE, (14, 17), 5)
+            pygame.draw.circle(self.image, WHITE, (w - 14, 17), 5)
+            pygame.draw.circle(self.image, BLACK, (15, 18), 3)
+            pygame.draw.circle(self.image, BLACK, (w - 13, 18), 3)
+
+    def update(self, solid_tiles, player_rect=None):
+        """Update with throw logic if player is nearby."""
+        # Call parent update for movement and physics
+        super().update(solid_tiles)
+
+        # Throw bottles if player is in range
+        if player_rect and self.alive_flag:
+            dist = abs(self.rect.centerx - player_rect.centerx)
+            # Always increment timer and throw when ready (more reliable)
+            self._throw_timer += 1
+            if dist < self.THROW_DISTANCE and self._throw_timer >= self.THROW_COOLDOWN:
+                self._throw_bottle(player_rect)
+                self._throw_timer = 0
+
+    def _throw_bottle(self, player_rect):
+        """Throw a beer bottle towards the player."""
+        if self.bottles_group is None:
+            return
+        # Throw from a slight offset (chest area)
+        throw_y = self.rect.centery - 15
+        bottle = BeerBottle(self.rect.centerx, throw_y, player_rect.centerx)
+        self.bottles_group.add(bottle)
+
+
+# ── BeerBottle – Projectile for Bier ────────────────────────
+
+class BeerBottle(pygame.sprite.Sprite):
+    """Projectile thrown by Bier enemies. Damages player on contact. Falls with gravity."""
+
+    WIDTH = 12
+    HEIGHT = 24
+    SPEED = 4.0
+    GRAVITY = 0.3
+    MAX_FALL_SPEED = 10.0
+
+    def __init__(self, x, y, target_x):
+        super().__init__()
+        self.image = pygame.Surface((self.WIDTH, self.HEIGHT), pygame.SRCALPHA)
+        self.rect = self.image.get_rect(midbottom=(x, y))
+        
+        # Direction towards target
+        dx = target_x - x
+        self.vx = self.SPEED if dx > 0 else -self.SPEED
+        self.vy = 0.0  # starts with 0 vertical velocity, gravity will increase it
+        self.on_ground = False
+
+        self._draw()
+
+    def _draw(self):
+        """Draw a beer bottle."""
+        self.image.fill((0, 0, 0, 0))
+        w, h = self.WIDTH, self.HEIGHT
+        # Bottle body (brown glass)
+        pygame.draw.rect(self.image, (101, 67, 33), (2, 5, w - 4, h - 8))
+        # Bottle neck (darker)
+        pygame.draw.rect(self.image, (80, 50, 20), (4, 1, w - 8, 5))
+        # Label (yellow/gold)
+        pygame.draw.rect(self.image, (255, 215, 0), (3, 10, w - 6, 6))
+
+    def update(self, solid_tiles=None, enemies=None):
+        """Move the bottle with gravity; remove if off-screen."""
+        # Apply gravity
+        self.vy = min(self.vy + self.GRAVITY, self.MAX_FALL_SPEED)
+        
+        # Horizontal movement
+        self.rect.x += int(self.vx)
+        
+        # Vertical movement
+        self.rect.y += int(self.vy)
+        
+        # Collision with solid tiles (ground, walls)
+        self.on_ground = False
+        for tile in (solid_tiles or []):
+            if self.rect.colliderect(tile.rect):
+                if self.vy > 0:  # falling down
+                    self.rect.bottom = tile.rect.top
+                    self.vy = 0
+                    self.on_ground = True
+                elif self.vy < 0:  # moving up
+                    self.rect.top = tile.rect.bottom
+                    self.vy = 0
+                # horizontal collision: stop horizontal movement
+                if self.vx > 0:
+                    self.rect.right = tile.rect.left
+                    self.vx = 0
+                elif self.vx < 0:
+                    self.rect.left = tile.rect.right
+                    self.vx = 0
+
+        # Fall off screen
+        if self.rect.top > SCREEN_HEIGHT + 50 or self.rect.right < 0 or self.rect.left > SCREEN_WIDTH + 50:
+            self.kill()
