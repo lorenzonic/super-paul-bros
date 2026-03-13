@@ -16,6 +16,7 @@ from settings import *
 _face_cache    = None   # None = not attempted; False = not found; Surface = loaded
 _patrice_cache = None   # same pattern for patrice.png (enemy image)
 _muscle_cache  = None   # same pattern for muscle.png
+_jump2_cache   = None   # same pattern for paul_jump2.png
 
 
 def _strip_white_bg(surface):
@@ -76,6 +77,22 @@ def _get_muscle_image():
     raw = pygame.image.load(path).convert_alpha()
     _strip_white_bg(raw)
     _muscle_cache = raw
+    return raw
+
+
+def _get_jump2_image():
+    """Load assets/paul_jump2.png once, strip white background, return Surface or None."""
+    global _jump2_cache
+    if _jump2_cache is not None:
+        return _jump2_cache if _jump2_cache else None
+    path = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                        "assets", "paul_jump2.png")
+    if not os.path.exists(path):
+        _jump2_cache = False
+        return None
+    raw = pygame.image.load(path).convert_alpha()
+    _strip_white_bg(raw)
+    _jump2_cache = raw
     return raw
 
 
@@ -1017,10 +1034,31 @@ class Player(pygame.sprite.Sprite):
         if key in cls._img_cache:
             return cls._img_cache[key]
 
-        W, H = (120, 150) if muscle else (80, 100)
+        # Larger size for jump state
+        if state == "jump":
+            W, H = (140, 170)
+        elif muscle:
+            W, H = (120, 150)
+        else:
+            W, H = (80, 100)
         surf = pygame.Surface((W, H), pygame.SRCALPHA)
 
-        if muscle:
+        if state == "jump":
+            # use paul_jump2.png for jump state
+            jump2_img = _get_jump2_image()
+            if jump2_img:
+                scaled = pygame.transform.smoothscale(jump2_img, (W, H))
+            else:
+                # fallback: use normal face
+                face_img = _get_face_image()
+                scaled = pygame.transform.smoothscale(face_img, (W, H)) if face_img else pygame.Surface((W, H), pygame.SRCALPHA)
+            
+            # star-power: golden tint overlay
+            if star:
+                tint = pygame.Surface((W, H), pygame.SRCALPHA)
+                tint.fill((255, 220, 0, 80))
+                scaled.blit(tint, (0, 0), special_flags=pygame.BLEND_RGBA_ADD)
+        elif muscle:
             # use muscle.png instead of the normal face
             muscle_img = _get_muscle_image()
             if muscle_img:
@@ -1068,7 +1106,7 @@ class Player(pygame.sprite.Sprite):
         if self.muscle_powered > 0:
             self.muscle_powered -= 1
 
-        self._handle_input(keys)
+        self._handle_input(keys, all_sprites)
         self._apply_physics()
         self._move(solid_tiles, question_blocks, all_sprites, score_ref)
         self._animate()
@@ -1085,7 +1123,7 @@ class Player(pygame.sprite.Sprite):
         self.hitbox.y += int(self.vy)
         self.rect.midbottom = self.hitbox.midbottom
 
-    def _handle_input(self, keys):
+    def _handle_input(self, keys, all_sprites):
         # acceleration-based movement (smooth)
         moving = False
         if keys[pygame.K_LEFT] or keys[pygame.K_a]:
@@ -1119,6 +1157,8 @@ class Player(pygame.sprite.Sprite):
                 self.on_ground = False
                 self._coyote = 0
                 self._jump_held = True
+                # Show "conjo" popup when jumping
+                all_sprites.add(ScorePopup(self.rect.centerx, self.rect.centery - 30, "conjo", WHITE, size=18))
         else:
             # cut jump short if released early
             if hasattr(self, '_jump_held') and self._jump_held and self.vy < jump_speed * 0.4:
