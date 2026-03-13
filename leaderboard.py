@@ -29,7 +29,7 @@ SUPABASE_URL = "https://uxujadrfuwvsjmaovsix.supabase.co"
 SUPABASE_KEY = "sb_publishable_HsDYt3yGvErDzmJLzlpV5A_5XcVCcxQ"
 # ──────────────────────────────────────────────────────────────────────────
 
-MAX_ENTRIES  = 10
+MAX_ENTRIES  = 30
 
 _configured = (
     not SUPABASE_URL.startswith("https://YOUR_PROJECT") and
@@ -156,7 +156,7 @@ async def fetch_scores() -> list:
     if not _configured:
         return _fallback_load()[:MAX_ENTRIES]
 
-    # fetch extra rows so dedup still gives us 10
+    # fetch extra rows so dedup still gives us MAX_ENTRIES
     url = (f"{SUPABASE_URL}/rest/v1/leaderboard"
            f"?select=name,score&order=score.desc&limit=100")
 
@@ -167,7 +167,7 @@ async def fetch_scores() -> list:
 
 
 async def post_score(name: str, score: int) -> list:
-    """Insert a new score; return updated top-10 (de-duplicated)."""
+    """Insert a new score; return updated top-30 (de-duplicated)."""
     name  = (name.strip() or "Player")[:12]
     body  = {"name": name, "score": int(score)}
 

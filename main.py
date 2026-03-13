@@ -464,12 +464,13 @@ def draw_menu(surface, board):
               14, SCREEN_WIDTH // 2, 368, (120, 80, 200), center=True)
 
     if board:
-        draw_text(surface, "Top 3:", 18, SCREEN_WIDTH // 2, 375, YELLOW, center=True)
+        draw_text(surface, "Top 5:", 18, SCREEN_WIDTH // 2, 375, YELLOW, center=True)
         medal_col = [(255, 215, 0), (192, 192, 192), (205, 127, 50)]
-        for i, entry in enumerate(board[:3]):
+        for i, entry in enumerate(board[:5]):
+            col = medal_col[i] if i < 3 else WHITE
             draw_text(surface,
                       f"{i+1}. {entry['name']}  {entry['score']:06d}",
-                      16, SCREEN_WIDTH // 2, 400 + i * 22, medal_col[i], center=True)
+                      16, SCREEN_WIDTH // 2, 400 + i * 22, col, center=True)
 # ── Gradient sky ──────────────────────────────────────────────
 _sky_gradient      = None
 _sky_gradient_dark = None
@@ -920,6 +921,13 @@ class Game:
                     self.state = STATE_LEADERBOARD
 
             elif self.state == STATE_LEADERBOARD:
+                # Update leaderboard when background fetch completes
+                if self._lb_fetch_task and self._lb_fetch_task.done():
+                    try:
+                        self._leaderboard = self._lb_fetch_task.result() or []
+                    except Exception:
+                        pass
+                    self._lb_fetch_task = None
                 draw_leaderboard(self._canvas, self._leaderboard,
                                  self._score, self._player_name, self._won,
                                  self._lb_scroll)
@@ -978,6 +986,9 @@ class Game:
                     self.touch.finger_down(fx, fy, event.finger_id)
                     if self.state == STATE_MENU:
                         if _MENU_LB_BTN.collidepoint(fx, fy):
+                            # Ensure leaderboard is being fetched
+                            if not self._lb_fetch_task or self._lb_fetch_task.done():
+                                self._lb_fetch_task = asyncio.create_task(fetch_scores())
                             self.state = STATE_LEADERBOARD
                         elif not any(r.collidepoint(fx, fy)
                                      for r in self.touch._rects.values()):
@@ -1068,6 +1079,9 @@ class Game:
                     if _MENU_START_BTN.collidepoint(mx, my):
                         self._go_name_input()
                     elif _MENU_LB_BTN.collidepoint(mx, my):
+                        # Ensure leaderboard is being fetched
+                        if not self._lb_fetch_task or self._lb_fetch_task.done():
+                            self._lb_fetch_task = asyncio.create_task(fetch_scores())
                         self.state = STATE_LEADERBOARD
                 elif self.state == STATE_NAME_INPUT:
                     # replicate the PLAY button rect from draw_name_input
